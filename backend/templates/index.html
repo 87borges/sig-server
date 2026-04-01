@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIG Server — Plataforma GIS Online</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@mapbox/togeojson/togeojson.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: 60px; background: #1a1a1a; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; overflow: hidden; transition: width 0.25s ease; }
+        .sidebar:hover { width: 220px; }
+        .sidebar-logo { padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+        .sidebar-logo h1 { font-size: 1.2em; }
+        .sidebar-logo p { font-size: 0.65em; opacity: 0.6; }
+        .sidebar-nav { flex: 1; padding: 10px 0; }
+        .nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; background: none; border: none; color: rgba(255,255,255,0.5); font-size: 0.95em; cursor: pointer; text-align: left; transition: all 0.2s; white-space: nowrap; }
+        .nav-btn:hover { background: rgba(255,255,255,0.08); color: white; }
+        .nav-btn.active { background: rgba(255,255,255,0.12); color: white; border-left: 3px solid #888; }
+        .nav-btn .icon { font-size: 1.3em; width: 28px; min-width: 28px; text-align: center; }
+        .nav-btn .label { opacity: 0; transition: opacity 0.15s; }
+        .sidebar:hover .nav-btn .label { opacity: 1; }
+
+        /* Main */
+        .main { margin-left: 60px; flex: 1; transition: margin-left 0.25s ease; }
+
+        /* Header */
+        .header { background: #1a1a1a; color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+        .header h2 { font-size: 1.1em; }
+        .header .subtitle { font-size: 0.75em; opacity: 0.6; }
+        .header .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85em; font-weight: 600; }
+        .btn-novo { background: #333; color: white; }
+        .btn-novo:hover { background: #555; }
+        .btn-voltar { background: #555; color: white; display: none; }
+        .btn-excluir { background: #c0392b; color: white; display: none; margin-left: auto; }
+
+        /* Content */
+        .content { height: calc(100vh - 49px); position: relative; }
+
+        /* Views */
+        .view { display: none; height: 100%; }
+        .view.active { display: flex; }
+
+        /* Projetos */
+        #view-projetos { flex-direction: column; padding: 20px; overflow-y: auto; }
+        .projetos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .projeto-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer; transition: transform 0.2s; }
+        .projeto-card:hover { transform: translateY(-3px); }
+        .projeto-card h4 { color: #1a1a1a; font-size: 1.1em; }
+        .projeto-card p { color: #888; font-size: 0.8em; margin-top: 5px; }
+
+        /* Mapa */
+        #map { width: 100%; height: 100%; }
+        .leaflet-control-layers { font-size: 0.85em; }
+
+        /* Painel lateral do mapa */
+        .map-panel { width: 300px; background: white; height: 100%; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); z-index: 40; }
+        .map-panel-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; }
+        .layer-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+        .layer-item:hover { background: #f9f9f9; }
+        .layer-name { font-size: 0.9em; }
+        .layer-type { font-size: 0.7em; color: #888; }
+        .toggle { width: 40px; height: 22px; background: #ccc; border-radius: 11px; cursor: pointer; position: relative; transition: background 0.2s; }
+        .toggle.on { background: #1a1a1a; }
+        .toggle::after { content: ''; width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: left 0.2s; }
+        .toggle.on::after { left: 20px; }
+
+        /* Upload area */
+        .upload-area { padding: 15px; border: 2px dashed #ddd; border-radius: 8px; text-align: center; margin: 15px; cursor: pointer; transition: border-color 0.2s; }
+        .upload-area:hover { border-color: #1a1a1a; }
+        .upload-area p { font-size: 0.85em; color: #888; }
+
+        /* Basemap selector */
+        .basemap-row { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; }
+        .basemap-row label { font-size: 0.85em; cursor: pointer; }
+        .basemap-row input { cursor: pointer; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 40px 20px; color: #888; }
+        .empty-state .icon { font-size: 3em; margin-bottom: 10px; }
+
+        @media (max-width: 768px) {
+            .map-panel { width: 220px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <h1>🌍 SIG Server</h1>
+            <p>Plataforma GIS Online</p>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-btn active" onclick="verProjetos(this)">
+                <span class="icon">📁</span> <span class="label">Projetos</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="header">
+            <div>
+                <h2 id="page-title">SIG Server</h2>
+                <div class="subtitle" id="page-subtitle">Plataforma GIS Online</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-novo" id="btn-novo" onclick="novoProjeto()">➕ Novo Projeto</button>
+                <button class="btn btn-voltar" id="btn-voltar" onclick="verProjetos()">← Voltar</button>
+                <span id="projeto-nome" style="font-weight:600;margin-left:10px;display:none"></span>
+                <button class="btn btn-excluir" id="btn-excluir" onclick="excluirProjeto()">🗑️</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Projetos -->
+            <div class="view active" id="view-projetos">
+                <div id="projetos-vazios" class="empty-state">
+                    <div class="icon">📂</div>
+                    <p>Nenhum projeto criado.</p>
+                    <p style="font-size:0.85em">Clique em <strong>"Novo Projeto"</strong> para começar.</p>
+                </div>
+                <div class="projetos-grid" id="projetos-grid" style="display:none"></div>
+            </div>
+
+            <!-- Mapa -->
+            <div class="view" id="view-mapa">
+                <div class="map-panel">
+                    <div class="map-panel-header">🗺️ Camadas</div>
+                    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+                        <p>📎 Clique para enviar<br><small>.shp .kml .kmz .gpkg .zip</small></p>
+                        <input type="file" id="file-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadFiles(this.files)">
+                    </div>
+                    <div id="layers-list"></div>
+                    <div class="map-panel-header" style="margin-top:10px">🌐 Base</div>
+                    <div class="basemap-row"><input type="radio" name="basemap" value="osm" checked onchange="trocarBase(this.value)"><label>OpenStreetMap</label></div>
+                    <div class="basemap-row"><input type="radio" name="basemap" value="satelite" onchange="trocarBase(this.value)"><label>Satélite (ESRI)</label></div>
+                    <div class="basemap-row"><input type="radio" name="basemap" value="topo" onchange="trocarBase(this.value)"><label>Topográfico (ESRI)</label></div>
+                </div>
+                <div style="flex:1"><div id="map"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let projetos = JSON.parse(localStorage.getItem('sig_projects') || '{}');
+        let projetoAtual = null;
+        let map, baseLayer, overlays = {};
+
+        // ===== MAPA =====
+        function initMap() {
+            map = L.map('map', { zoomControl: true }).setView([-15.78, -47.93], 10);
+            baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap', maxZoom: 19
+            }).addTo(map);
+        }
+
+        function trocarBase(tipo) {
+            map.removeLayer(baseLayer);
+            if (tipo === 'osm') baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 });
+            else if (tipo === 'satelite') baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
+            else if (tipo === 'topo') baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
+            baseLayer.addTo(map);
+        }
+
+        // ===== PROJETOS =====
+        function salvarProjetos() { localStorage.setItem('sig_projects', JSON.stringify(projetos)); }
+
+        function renderProjetos() {
+            const keys = Object.keys(projetos);
+            const vazios = document.getElementById('projetos-vazios');
+            const grid = document.getElementById('projetos-grid');
+            if (keys.length === 0) { vazios.style.display = 'block'; grid.style.display = 'none'; return; }
+            vazios.style.display = 'none'; grid.style.display = 'grid'; grid.innerHTML = '';
+            keys.forEach(id => {
+                const p = projetos[id];
+                const div = document.createElement('div');
+                div.className = 'projeto-card';
+                div.innerHTML = `<h4>📁 ${p.nome}</h4><p>${new Date(p.data).toLocaleDateString('pt-BR')}</p>`;
+                div.onclick = () => abrirProjeto(id);
+                grid.appendChild(div);
+            });
+        }
+
+        function novoProjeto() {
+            const nome = prompt('Nome do projeto:');
+            if (!nome) return;
+            const id = 'p_' + Date.now();
+            projetos[id] = { nome, data: new Date().toISOString() };
+            salvarProjetos();
+            abrirProjeto(id);
+        }
+
+        function abrirProjeto(id) {
+            projetoAtual = id;
+            mostrarView('view-mapa');
+            document.getElementById('btn-novo').style.display = 'none';
+            document.getElementById('btn-voltar').style.display = '';
+            document.getElementById('btn-excluir').style.display = '';
+            document.getElementById('projeto-nome').style.display = '';
+            document.getElementById('projeto-nome').textContent = '📁 ' + projetos[id].nome;
+            document.getElementById('page-subtitle').textContent = projetos[id].nome;
+            if (!map) initMap(); else setTimeout(() => map.invalidateSize(), 100);
+            carregarCamadas();
+        }
+
+        function verProjetos(btn) {
+            projetoAtual = null;
+            mostrarView('view-projetos');
+            document.getElementById('btn-novo').style.display = '';
+            document.getElementById('btn-voltar').style.display = 'none';
+            document.getElementById('btn-excluir').style.display = 'none';
+            document.getElementById('projeto-nome').style.display = 'none';
+            document.getElementById('page-subtitle').textContent = 'Plataforma GIS Online';
+            if (btn) { document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+            renderProjetos();
+        }
+
+        function excluirProjeto() {
+            if (!confirm('Excluir este projeto?')) return;
+            delete projetos[projetoAtual];
+            salvarProjetos();
+            verProjetos();
+        }
+
+        function mostrarView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // ===== CAMADAS =====
+        function carregarCamadas() {
+            fetch(`/api/projects/${projetoAtual}/layers`).then(r => r.json()).then(data => {
+                const lista = document.getElementById('layers-list');
+                lista.innerHTML = '';
+                if (!data.layers || data.layers.length === 0) {
+                    lista.innerHTML = '<div class="empty-state" style="padding:20px"><p style="font-size:0.85em">Nenhuma camada</p></div>';
+                    return;
+                }
+                data.layers.forEach(layer => {
+                    const div = document.createElement('div');
+                    div.className = 'layer-item';
+                    div.innerHTML = `<div><div class="layer-name">${layer.name}</div><div class="layer-type">.${layer.type}</div></div><div class="toggle on" onclick="toggleCamada(this, '${layer.filename}')"></div>`;
+                    lista.appendChild(div);
+                });
+            });
+        }
+
+        function toggleCamada(btn, filename) {
+            const isOn = btn.classList.toggle('on');
+            if (isOn) {
+                carregarCamadaGeoJSON(filename);
+            } else if (overlays[filename]) {
+                map.removeLayer(overlays[filename]);
+            }
+        }
+
+        function carregarCamadaGeoJSON(filename) {
+            if (overlays[filename]) { map.addLayer(overlays[filename]); return; }
+            fetch(`/api/projects/${projetoAtual}/file/${filename}`).then(r => {
+                if (!r.ok) return null;
+                const ct = r.headers.get('content-type');
+                if (ct && ct.includes('geojson')) return r.json();
+                return r.text();
+            }).then(data => {
+                if (!data) return;
+                try {
+                    let geojson;
+                    if (typeof data === 'string') {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/xml');
+                        geojson = toGeoJSON.kml(doc);
+                    } else {
+                        geojson = data;
+                    }
+                    overlays[filename] = L.geoJSON(geojson, {
+                        style: { color: '#1a1a1a', weight: 2, fillColor: '#333', fillOpacity: 0.3 },
+                        onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
+                    }).addTo(map);
+                    map.fitBounds(overlays[filename].getBounds());
+                } catch (e) { console.error('Erro ao carregar camada:', e); }
+            });
+        }
+
+        // ===== UPLOAD =====
+        function uploadFiles(files) {
+            if (!projetoAtual) return;
+            const fd = new FormData();
+            Array.from(files).forEach(f => fd.append('file', f));
+            fetch(`/api/projects/${projetoAtual}/upload`, { method: 'POST', body: fd })
+            .then(r => r.json()).then(data => { if (data.success) carregarCamadas(); else alert(data.error || 'Erro ao enviar'); })
+            .catch(e => alert('Erro: ' + e.message));
+            document.getElementById('file-input').value = '';
+        }
+
+        // Init
+        renderProjetos();
+    </script>
+</body>
+</html>
