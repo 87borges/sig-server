@@ -591,7 +591,7 @@
                         xhr.send(fd);
                         rasterAbortController.signal.addEventListener('abort', () => xhr.abort());
                     });
-                    if (result.rasters) {
+                    if (result && result.rasters && result.rasters.length > 0) {
                         result.rasters.forEach(r => {
                             rasterVisibility[r.id] = true;
                             rasterGroupVisibility[gid] = true;
@@ -608,6 +608,7 @@
                     }
                 } catch (e) {
                     if (e.message === 'Cancelado') { hideRasterOverlay(); return; }
+                    console.error('Raster upload error:', e.message);
                     failed++;
                 }
             }
@@ -619,7 +620,7 @@
             } else if (success > 0) {
                 showRasterFeedback('⚠️', `${success} ok, ${failed} falhou`, '#f59e0b');
             } else {
-                showRasterFeedback('❌', `Falha ao carregar`, '#ef4444');
+                showRasterFeedback('❌', `Falha ao carregar (${total - success}/${total})`, '#ef4444');
             }
             document.getElementById('raster-upload-input').value = '';
         }
