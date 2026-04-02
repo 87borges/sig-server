@@ -169,6 +169,76 @@
                         <div style="border-top:1px solid rgba(128,128,128,0.2);margin:4px 12px"></div>
                         <div class="basemap-row" onclick="createVectorGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
                         <input type="file" id="vector-upload-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadVectors(this.files)">
+                    </div>
+                    <!-- Vector Style Editor Modal -->
+                    <div id="vector-editor" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:340px;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                                <span id="ve-title" style="font-weight:700;font-size:1em">Editar vetor</span>
+                                <span onclick="closeVectorEditor()" style="cursor:pointer;font-size:1.3em;opacity:0.5">&times;</span>
+                            </div>
+                            <div id="ve-type" style="font-size:0.75em;color:#888;margin-bottom:12px"></div>
+                            <!-- Cor principal -->
+                            <div style="margin-bottom:14px">
+                                <div style="font-size:0.8em;font-weight:600;margin-bottom:6px" id="ve-color-label">Cor</div>
+                                <div style="display:flex;gap:8px;align-items:center">
+                                    <input type="color" id="ve-color-picker" value="#e74c3c" style="width:40px;height:40px;border:none;cursor:pointer;border-radius:6px;padding:0">
+                                    <div id="ve-color-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;flex:1"></div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                                    <span style="font-size:0.75em;color:#888">HEX:</span>
+                                    <input type="text" id="ve-color-hex" value="#e74c3c" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                </div>
+                            </div>
+                            <!-- Transparência -->
+                            <div style="margin-bottom:14px">
+                                <div style="display:flex;justify-content:space-between;font-size:0.8em;font-weight:600;margin-bottom:4px">
+                                    <span id="ve-opacity-label">Transparência</span>
+                                    <span id="ve-opacity-val">60%</span>
+                                </div>
+                                <div style="position:relative;height:16px;background:repeating-conic-gradient(#ccc 0% 25%,white 0% 50%) 50%/10px 10px;border-radius:8px;overflow:hidden;border:1px solid #ddd">
+                                    <div id="ve-opacity-fill" style="position:absolute;inset:0;background:#e74c3c;border-radius:8px"></div>
+                                    <input type="range" id="ve-opacity" min="0" max="100" value="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
+                                </div>
+                            </div>
+                            <!-- Espessura (linhas/polígonos) -->
+                            <div id="ve-weight-section" style="margin-bottom:14px;display:none">
+                                <div style="display:flex;justify-content:space-between;font-size:0.8em;font-weight:600;margin-bottom:4px">
+                                    <span>Espessura do contorno</span>
+                                    <span id="ve-weight-val">2px</span>
+                                </div>
+                                <input type="range" id="ve-weight" min="0" max="20" value="2" style="width:100%;accent-color:#333;cursor:pointer">
+                            </div>
+                            <!-- Cor do contorno (polígonos) -->
+                            <div id="ve-stroke-section" style="margin-bottom:14px;display:none">
+                                <div style="font-size:0.8em;font-weight:600;margin-bottom:6px">Cor do contorno</div>
+                                <div style="display:flex;gap:8px;align-items:center">
+                                    <input type="color" id="ve-stroke-picker" value="#333333" style="width:36px;height:36px;border:none;cursor:pointer;border-radius:6px;padding:0">
+                                    <div id="ve-stroke-color-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;flex:1"></div>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                                    <span style="font-size:0.75em;color:#888">HEX:</span>
+                                    <input type="text" id="ve-stroke-hex" value="#333333" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                </div>
+                            </div>
+                            <!-- Marcadores (pontos) -->
+                            <div id="ve-marker-section" style="margin-bottom:14px;display:none">
+                                <div style="font-size:0.8em;font-weight:600;margin-bottom:8px">Marcador</div>
+                                <div id="ve-markers-grid" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+                                    <span style="font-size:0.75em;color:#888;white-space:nowrap">Tamanho:</span>
+                                    <input type="range" id="ve-marker-size" min="8" max="40" value="16" style="flex:1;accent-color:#333;cursor:pointer">
+                                    <span id="ve-marker-size-val" style="font-size:0.8em;min-width:30px">16</span>
+                                </div>
+                            </div>
+                            <!-- Preview -->
+                            <div id="ve-preview" style="margin-bottom:14px;text-align:center;padding:16px;background:#f5f5f5;border-radius:10px;min-height:60px;display:flex;align-items:center;justify-content:center"></div>
+                            <div style="display:flex;gap:8px">
+                                <button onclick="cancelVectorEdit()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
+                                <button onclick="applyVectorEdit()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Aplicar</button>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Wayback Timeline -->
                     <div id="wayback-timeline" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:12px;padding:10px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.2)">
                         <div style="display:flex;align-items:center;gap:12px;min-width:280px">
@@ -536,10 +606,8 @@
                             row.innerHTML = `
                                 <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
                                 <span onclick="toggleVector('${g.id}','${v.id}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
-                                <span onclick="changeVectorColor('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Cor">🎨</span>
-                                <span onclick="changeVectorOpacity('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Transparência">💧</span>
-                                <span onclick="changeVectorWeight('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Espessura">✏️</span>
-                                <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0">🗑️</span>
+                                <span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.75em;flex-shrink:0" title="Editar aparência">✏️</span>
+                                <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
                             `;
                             gdiv.appendChild(row);
                         });
@@ -636,8 +704,30 @@
                             const color = vec.color || '#e74c3c';
                             const opacity = vec.opacity ?? 0.6;
                             const weight = vec.weight ?? 2;
+                            const strokeColor = vec.strokeColor || '#333333';
+                            const marker = vec.marker || '●';
+                            const markerSize = vec.markerSize || 16;
+                            const vtype = (geojson.features[0].geometry?.type||'').toLowerCase();
+                            const isPoint = vtype.includes('point');
+                            const isLine = vtype.includes('line');
                             vectorLayers[vid] = L.geoJSON(geojson, {
-                                style: { color: color, weight: weight, fillColor: color, fillOpacity: opacity * 0.3, opacity: opacity },
+                                style: isPoint ? { opacity: opacity } : {
+                                    color: isLine ? color : strokeColor,
+                                    weight: weight,
+                                    fillColor: color,
+                                    fillOpacity: isLine ? 0 : opacity,
+                                    opacity: isLine ? opacity : 1
+                                },
+                                pointToLayer: isPoint ? (f, latlng) => {
+                                    return L.marker(latlng, {
+                                        icon: L.divIcon({
+                                            html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
+                                            className: '',
+                                            iconSize: [markerSize, markerSize],
+                                            iconAnchor: [markerSize/2, markerSize]
+                                        })
+                                    });
+                                } : null,
                                 onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
                             }).addTo(map);
                             if (vectorLayers[vid].getLayers().length === 0) {
@@ -654,43 +744,186 @@
             }
         }
 
-        function changeVectorColor(gid, vid) {
+        function changeVectorColor(gid, vid) {}
+
+        // ===== VECTOR STYLE EDITOR =====
+        const VE_COLORS = [
+            '#e74c3c','#c0392b','#e67e22','#f39c12','#f1c40f','#2ecc71','#27ae60','#1abc9c',
+            '#16a085','#3498db','#2980b9','#9b59b6','#8e44ad','#34495e','#2c3e50','#7f8c8d',
+            '#d35400','#e84393','#fd79a8','#a29bfe','#6c5ce7','#00cec9','#55efc4','#ffeaa7',
+            '#fab1a0','#ff7675','#74b9ff','#81ecec','#636e72','#b2bec3','#dfe6e9','#ffffff'
+        ];
+        const VE_MARKERS = [
+            '●','■','▲','◆','★','♦','⬟','⬡','◉','⊙','⊕','⊗','◈','▼','◀','▶'
+        ];
+        let veEditGid = null, veEditVid = null, veEditBackup = null;
+
+        function detectVectorType(gid, vid) {
+            if (!vectorLayers[vid]) return 'polygon';
+            const layer = vectorLayers[vid];
+            const layers = layer.getLayers();
+            if (layers.length === 0) return 'polygon';
+            const geom = layers[0].feature?.geometry;
+            if (!geom) return 'polygon';
+            const t = geom.type.toLowerCase();
+            if (t.includes('point') || t.includes('multipoint')) return 'point';
+            if (t.includes('line') || t.includes('multiline')) return 'line';
+            return 'polygon';
+        }
+
+        function openVectorEditor(gid, vid) {
             const group = vectorGroups.find(g => g.id === gid);
             const vec = group?.vectors.find(v => v.id === vid);
             if (!vec) return;
-            const color = prompt('Cor (hex ou nome):', vec.color || '#e74c3c');
-            if (!color) return;
-            vec.color = color;
-            saveVectorGroups();
-            if (vectorLayers[vid]) {
-                vectorLayers[vid].setStyle({ color: color, fillColor: color });
+            veEditGid = gid; veEditVid = vid;
+            veEditBackup = JSON.parse(JSON.stringify(vec));
+            const vtype = detectVectorType(gid, vid);
+
+            document.getElementById('ve-title').textContent = vec.name;
+            const typeLabels = {polygon:'Polígono',line:'Linha',point:'Ponto'};
+            document.getElementById('ve-type').textContent = 'Tipo: ' + (typeLabels[vtype]||vtype);
+
+            // Color
+            const color = vec.color || '#e74c3c';
+            document.getElementById('ve-color-picker').value = color;
+            document.getElementById('ve-color-hex').value = color;
+            const grid = document.getElementById('ve-color-grid');
+            grid.innerHTML = '';
+            VE_COLORS.forEach(c => {
+                const d = document.createElement('div');
+                d.style.cssText = `width:16px;height:16px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===color?'#333':'transparent'}`;
+                d.onclick = () => { document.getElementById('ve-color-picker').value=c; document.getElementById('ve-color-hex').value=c; updateVePreview(); grid.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                grid.appendChild(d);
+            });
+            document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
+
+            // Opacity
+            const op = Math.round((vec.opacity??0.6)*100);
+            document.getElementById('ve-opacity').value = op;
+            document.getElementById('ve-opacity-val').textContent = op+'%';
+            document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
+            document.getElementById('ve-opacity-fill').style.background = color;
+            document.getElementById('ve-opacity-fill').style.opacity = op/100;
+
+            // Weight (line + polygon outline)
+            const ws = document.getElementById('ve-weight-section');
+            ws.style.display = (vtype==='line'||vtype==='polygon')?'block':'none';
+            if (vtype==='line'||vtype==='polygon') {
+                document.getElementById('ve-weight').value = vec.weight??2;
+                document.getElementById('ve-weight-val').textContent = (vec.weight??2)+'px';
+            }
+
+            // Stroke (polygon only)
+            const ss = document.getElementById('ve-stroke-section');
+            ss.style.display = vtype==='polygon'?'block':'none';
+            if (vtype==='polygon') {
+                const sc = vec.strokeColor||'#333333';
+                document.getElementById('ve-stroke-picker').value = sc;
+                document.getElementById('ve-stroke-hex').value = sc;
+                const sg = document.getElementById('ve-stroke-color-grid');
+                sg.innerHTML = '';
+                VE_COLORS.forEach(c => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:14px;height:14px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===sc?'#333':'transparent'}`;
+                    d.onclick = () => { document.getElementById('ve-stroke-picker').value=c; document.getElementById('ve-stroke-hex').value=c; updateVePreview(); sg.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                    sg.appendChild(d);
+                });
+            }
+
+            // Markers (point only)
+            const ms = document.getElementById('ve-marker-section');
+            ms.style.display = vtype==='point'?'block':'none';
+            if (vtype==='point') {
+                const mg = document.getElementById('ve-markers-grid');
+                mg.innerHTML = '';
+                const selM = vec.marker||'●';
+                VE_MARKERS.forEach(m => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border-radius:6px;border:2px solid ${m===selM?'#333':'#ddd'};background:${m===selM?'#f0f0f0':'white'}`;
+                    d.textContent = m;
+                    d.onclick = () => { mg.querySelectorAll('div').forEach(x=>{x.style.borderColor='#ddd';x.style.background='white'}); d.style.borderColor='#333'; d.style.background='#f0f0f0'; vec._selMarker=m; updateVePreview(); };
+                    if(m===selM){d.style.borderColor='#333';d.style.background='#f0f0f0';}
+                    mg.appendChild(d);
+                });
+                document.getElementById('ve-marker-size').value = vec.markerSize||16;
+                document.getElementById('ve-marker-size-val').textContent = (vec.markerSize||16)+'px';
+            }
+
+            // Events
+            document.getElementById('ve-color-picker').oninput = e => { document.getElementById('ve-color-hex').value=e.target.value; updateVePreview(); };
+            document.getElementById('ve-color-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-color-picker').value=e.target.value; updateVePreview();} };
+            document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateVePreview(); };
+            document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateVePreview(); };
+            document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateVePreview(); };
+            document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateVePreview();} };
+            document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateVePreview(); };
+
+            updateVePreview();
+            document.getElementById('vector-editor').style.display = 'flex';
+        }
+
+        function updateVePreview() {
+            const color = document.getElementById('ve-color-picker').value;
+            const op = parseInt(document.getElementById('ve-opacity').value)/100;
+            const weight = parseInt(document.getElementById('ve-weight').value)||0;
+            const strokeColor = document.getElementById('ve-stroke-picker').value;
+            const markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
+            const group = vectorGroups.find(g=>g.id===veEditGid);
+            const vec = group?.vectors.find(v=>v.id===veEditVid);
+            const vtype = detectVectorType(veEditGid, veEditVid);
+            const preview = document.getElementById('ve-preview');
+            document.getElementById('ve-opacity-fill').style.background = color;
+            document.getElementById('ve-opacity-fill').style.opacity = op;
+
+            if (vtype==='point') {
+                const m = vec?._selMarker || vec?.marker || '●';
+                preview.innerHTML = `<span style="font-size:${markerSize}px;color:${color};opacity:${op}">${m}</span>`;
+            } else if (vtype==='line') {
+                preview.innerHTML = `<div style="width:100%;height:4px;background:${color};opacity:${op};border-radius:2px"></div>`;
+            } else {
+                preview.innerHTML = `<div style="width:80px;height:50px;background:${color};opacity:${op};border:${weight}px solid ${strokeColor};border-radius:4px"></div>`;
             }
         }
 
-        function changeVectorOpacity(gid, vid) {
-            const group = vectorGroups.find(g => g.id === gid);
-            const vec = group?.vectors.find(v => v.id === vid);
-            if (!vec) return;
-            const op = prompt('Opacidade (0 a 1):', vec.opacity ?? 0.6);
-            if (!op || isNaN(op)) return;
-            vec.opacity = parseFloat(op);
-            saveVectorGroups();
-            if (vectorLayers[vid]) {
-                vectorLayers[vid].setStyle({ opacity: vec.opacity, fillOpacity: vec.opacity * 0.3 });
-            }
-        }
+        function closeVectorEditor() { document.getElementById('vector-editor').style.display='none'; }
 
-        function changeVectorWeight(gid, vid) {
-            const group = vectorGroups.find(g => g.id === gid);
-            const vec = group?.vectors.find(v => v.id === vid);
-            if (!vec) return;
-            const w = prompt('Espessura da linha (px):', vec.weight ?? 2);
-            if (!w || isNaN(w)) return;
-            vec.weight = parseFloat(w);
+        function cancelVectorEdit() { closeVectorEditor(); }
+
+        function applyVectorEdit() {
+            const group = vectorGroups.find(g=>g.id===veEditGid);
+            const vec = group?.vectors.find(v=>v.id===veEditVid);
+            if (!vec) { closeVectorEditor(); return; }
+            vec.color = document.getElementById('ve-color-picker').value;
+            vec.opacity = parseInt(document.getElementById('ve-opacity').value)/100;
+            vec.weight = parseInt(document.getElementById('ve-weight').value)||2;
+            vec.strokeColor = document.getElementById('ve-stroke-picker').value;
+            vec.marker = vec._selMarker || vec.marker || '●';
+            vec.markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
+            delete vec._selMarker;
             saveVectorGroups();
-            if (vectorLayers[vid]) {
-                vectorLayers[vid].setStyle({ weight: vec.weight });
+            // Apply to layer
+            if (vectorLayers[veEditVid]) {
+                const vtype = detectVectorType(veEditGid, veEditVid);
+                if (vtype==='point') {
+                    vectorLayers[veEditVid].eachLayer(l => {
+                        if (l.setIcon) {
+                            const html = `<span style="font-size:${vec.markerSize}px;color:${vec.color}">${vec.marker}</span>`;
+                            l.setIcon(L.divIcon({html, className:'', iconSize:[vec.markerSize,vec.markerSize], iconAnchor:[vec.markerSize/2,vec.markerSize]}));
+                        }
+                    });
+                } else {
+                    const style = {
+                        color: vtype==='polygon' ? vec.strokeColor : vec.color,
+                        weight: vec.weight,
+                        fillColor: vec.color,
+                        fillOpacity: vec.opacity,
+                        opacity: vtype==='line' ? vec.opacity : 1
+                    };
+                    vectorLayers[veEditVid].setStyle(style);
+                }
             }
+            closeVectorEditor();
+            loadVectorGroups();
         }
 
         async function saveVectorGroups() {
