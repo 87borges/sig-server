@@ -137,12 +137,16 @@
                         <input type="file" id="file-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadFiles(this.files)">
                     </div>
                     <div id="layers-list"></div>
-                    <div class="map-panel-header" style="margin-top:10px">🌐 Base</div>
-                    <div class="basemap-row"><input type="radio" name="basemap" value="osm" checked onchange="trocarBase(this.value)"><label>OpenStreetMap</label></div>
-                    <div class="basemap-row"><input type="radio" name="basemap" value="satelite" onchange="trocarBase(this.value)"><label>Satélite (ESRI)</label></div>
-                    <div class="basemap-row"><input type="radio" name="basemap" value="topo" onchange="trocarBase(this.value)"><label>Topográfico (ESRI)</label></div>
                 </div>
-                <div style="flex:1"><div id="map"></div></div>
+                <div style="flex:1;position:relative"><div id="map"></div>
+                    <!-- Basemap selector flutuante -->
+                    <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
+                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:160px">
+                        <div class="basemap-row"><input type="radio" name="basemap" value="osm" checked onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>OpenStreetMap</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="satelite" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (ESRI)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="topo" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Topográfico (ESRI)</label></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
