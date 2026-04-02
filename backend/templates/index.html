@@ -489,7 +489,7 @@
                     allRow.style.gap = '6px';
                     allRow.style.borderBottom = '1px solid rgba(128,128,128,0.2)';
                     allRow.style.marginBottom = '2px';
-                    const allVisible = metas.length > 0 && metas.every(m => rasterVisibility[m.id]);
+                    const allVisible = metas.length > 0 && metas.every(m => rasterVisibility[m.id] !== false);
                     allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
                     list.appendChild(allRow);
                     }
@@ -601,7 +601,7 @@
                         const header = document.createElement('div');
                         header.className = 'basemap-row';
                         header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
-                        const allVis = g.vectors.length > 0 && g.vectors.every(v => vectorVisibility[v.id]);
+                        const allVis = g.vectors.length > 0 && g.vectors.every(v => vectorVisibility[v.id] !== false);
                         header.innerHTML = `
                             <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${allVis ? '👁️' : '🙈'}</span>
                             <span onclick="renameVectorGroup('${g.id}','${g.name}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
@@ -1031,7 +1031,7 @@
         function toggleAllVectors(gid) {
             const group = vectorGroups.find(g => g.id === gid);
             if (!group) return;
-            const allVis = group.vectors.every(v => vectorVisibility[v.id]);
+            const allVis = group.vectors.every(v => vectorVisibility[v.id] !== false);
             group.vectors.forEach(v => toggleVector(gid, v.id));
         }
 
