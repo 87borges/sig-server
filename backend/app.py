@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 ALLOWED_EXTENSIONS = {'shp', 'shx', 'dbf', 'prj', 'kml', 'kmz', 'gpkg', 'zip'}
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -108,7 +109,7 @@ def upload_raster():
     bounds = None
     try:
         import subprocess, json
-        r = subprocess.run(['gdalinfo', '-json', src], capture_output=True, text=True, timeout=30)
+        r = subprocess.run(['gdalinfo', '-json', src], capture_output=True, text=True, timeout=60)
         if r.returncode == 0:
             info = json.loads(r.stdout)
             corners = info.get('cornerCoordinates', {})
@@ -188,7 +189,7 @@ def upload_raster():
     try:
         import subprocess
         r = subprocess.run(['gdal_translate', '-of', 'PNG', '-scale', '-outsize', '4096', '4096', src, png_path],
-                          capture_output=True, timeout=60)
+                          capture_output=True, timeout=180)
         converted = r.returncode == 0 and os.path.isfile(png_path)
     except Exception:
         pass
