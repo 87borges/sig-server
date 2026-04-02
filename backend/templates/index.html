@@ -580,9 +580,21 @@
                 .then(r => r.json())
                 .then(groups => {
                     vectorGroups = groups;
-                    const list = document.getElementById('vector-groups-list');
-                    list.innerHTML = '';
-                    groups.forEach(g => {
+                    // Detect types for vectors that don't have one yet
+                    const undetected = [];
+                    groups.forEach(g => g.vectors.forEach(v => { if (!v._detectedType) undetected.push(v); }));
+                    if (undetected.length > 0) {
+                        Promise.all(undetected.map(v => fetch(`/api/vector/${projetoAtual}/detect-type/${v.id}`).then(r=>r.json()).then(d=>{v._detectedType=d.type;}))).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
+                    } else {
+                        renderVectorMenu();
+                    }
+                });
+        }
+
+        function renderVectorMenu() {
+            const list = document.getElementById('vector-groups-list');
+            list.innerHTML = '';
+            vectorGroups.forEach(g => {
                         const gdiv = document.createElement('div');
                         gdiv.style.cssText = 'border-bottom:1px solid rgba(128,128,128,0.15)';
                         // Group header
@@ -693,6 +705,26 @@
                     const group = vectorGroups.find(g => g.id === gid);
                     const vec = group?.vectors.find(v => v.id === vid);
                     if (!vec) return;
+                    // Detect type from geojson if not yet known
+                    if (!vec._detectedType) {
+                        try {
+                            let gj = null;
+                            if (vec.type === 'kml' || vec.type === 'kmz') {
+                                const lr = await fetch(`/api/vector/${projetoAtual}/files/${vid}`);
+                                const ld = await lr.json();
+                                const kf = ld.files.find(f => f.endsWith('.kml') || f.endsWith('.kmz'));
+                                if (kf) { const r = await fetch(`/api/vector/${projetoAtual}/file/${kf}`); const t = await r.text(); gj = toGeoJSON.kml(new DOMParser().parseFromString(t,'text/xml')); }
+                            } else {
+                                const r = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}`);
+                                if (r.ok) gj = await r.json();
+                            }
+                            if (gj?.features?.[0]?.geometry?.type) {
+                                const gt = gj.features[0].geometry.type.toLowerCase();
+                                vec._detectedType = gt.includes('point') ? 'point' : gt.includes('line') ? 'line' : 'polygon';
+                                saveVectorGroups();
+                            }
+                        } catch(e) {}
+                    }
                     try {
                         let geojson = null;
                         if (vec.type === 'kml' || vec.type === 'kmz') {
@@ -729,11 +761,8 @@
                             const strokeColor = vec.strokeColor || '#333333';
                             const marker = vec.marker || '●';
                             const markerSize = vec.markerSize || 16;
-                            const vtype = (geojson.features[0].geometry?.type||'').toLowerCase();
-                            const isPoint = vtype.includes('point');
-                            const isLine = vtype.includes('line');
-                            // Save detected type
-                            vec._detectedType = isPoint ? 'point' : isLine ? 'line' : 'polygon';
+                            const isPoint = vec._detectedType === 'point';
+                            const isLine = vec._detectedType === 'line';
                             vectorLayers[vid] = L.geoJSON(geojson, {
                                 style: isPoint ? { opacity: opacity } : {
                                     color: isLine ? color : strokeColor,

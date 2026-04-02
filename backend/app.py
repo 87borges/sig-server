@@ -400,6 +400,45 @@ def get_vector_files_list(project, vid):
     files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
     return jsonify({'files': files})
 
+@app.route('/api/vector/<project>/detect-type/<vid>', methods=['GET'])
+def detect_vector_type(project, vid):
+    """Detect geometry type without full conversion"""
+    import subprocess
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    main_file = None
+    for f in files:
+        if f.endswith('.zip'):
+            import zipfile, tempfile
+            tmpdir = tempfile.mkdtemp()
+            with zipfile.ZipFile(os.path.join(VECTOR_DIR, f), 'r') as z:
+                z.extractall(tmpdir)
+            for ff in os.listdir(tmpdir):
+                ext = ff.rsplit('.', 1)[-1].lower()
+                if ext in ('shp', 'gpkg', 'kml'):
+                    main_file = os.path.join(tmpdir, ff)
+                    break
+            break
+    if not main_file:
+        for f in files:
+            ext = f.rsplit('.', 1)[-1].lower()
+            if ext in ('shp', 'gpkg', 'kml'):
+                main_file = os.path.join(VECTOR_DIR, f)
+                break
+    if not main_file:
+        return jsonify({'type': 'polygon'})
+    try:
+        r = subprocess.run(['ogrinfo', '-so', '-al', main_file], capture_output=True, text=True, timeout=10)
+        output = r.stdout.lower()
+        if 'point' in output:
+            return jsonify({'type': 'point'})
+        elif 'line string' in output or 'linestring' in output or 'multiline' in output:
+            return jsonify({'type': 'line'})
+        elif 'polygon' in output or 'multipolygon' in output:
+            return jsonify({'type': 'polygon'})
+        return jsonify({'type': 'polygon'})
+    except:
+        return jsonify({'type': 'polygon'})
+
 @app.route('/api/vector/<project>/geojson/<vid>', methods=['GET'])
 def get_vector_geojson(project, vid):
     """Convert shapefile/gpkg to GeoJSON using ogr2ogr"""
