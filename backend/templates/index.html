@@ -271,18 +271,17 @@
             if (rasterOverlay) return;
             rasterOverlay = document.createElement('div');
             rasterOverlay.id = 'raster-overlay';
-            rasterOverlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center';
+            rasterOverlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);display:flex;align-items:center;justify-content:center';
             const box = document.createElement('div');
-            box.style.cssText = 'background:white;border-radius:16px;padding:28px 36px;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-width:360px;max-width:500px;text-align:center';
+            box.style.cssText = 'background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:16px;padding:28px 36px;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-width:360px;max-width:500px;text-align:center;color:white';
             box.innerHTML = `
-                <div style="font-size:1.6em;margin-bottom:12px">⏳</div>
                 <div id="raster-upload-title" style="font-weight:600;font-size:1.05em;margin-bottom:6px">Enviando rasters...</div>
-                <div id="raster-upload-file" style="font-size:0.8em;color:#888;margin-bottom:14px"></div>
-                <div style="background:#eee;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px">
-                    <div id="raster-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#1d4ed8);border-radius:8px;transition:width 0.3s"></div>
+                <div id="raster-upload-file" style="font-size:0.8em;color:rgba(255,255,255,0.7);margin-bottom:14px"></div>
+                <div style="background:rgba(255,255,255,0.2);border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px">
+                    <div id="raster-progress-bar" style="height:100%;width:0%;background:rgba(255,255,255,0.8);border-radius:8px;transition:width 0.3s"></div>
                 </div>
-                <div id="raster-progress-text" style="font-size:0.8em;color:#888;margin-bottom:14px">0%</div>
-                <button id="raster-cancel-btn" onclick="cancelRasterUpload()" style="background:#ef4444;color:white;border:none;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:0.9em">⏹ Interromper</button>
+                <div id="raster-progress-text" style="font-size:0.8em;color:rgba(255,255,255,0.7);margin-bottom:14px">0%</div>
+                <button id="raster-cancel-btn" onclick="cancelRasterUpload()" style="background:rgba(239,68,68,0.8);color:white;border:none;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:0.9em">⏹ Interromper</button>
             `;
             rasterOverlay.appendChild(box);
             document.body.appendChild(rasterOverlay);
@@ -372,7 +371,7 @@
 
         function showRasterFeedback(icon, text, color) {
             const el = document.createElement('div');
-            el.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:${color};color:white;padding:20px 32px;border-radius:12px;font-size:1em;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)`;
+            el.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:${color};backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);color:white;padding:20px 32px;border-radius:12px;font-size:1em;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)`;
             el.innerHTML = `<div style="font-size:1.5em;margin-bottom:6px">${icon}</div>${text}`;
             document.body.appendChild(el);
             setTimeout(() => document.body.removeChild(el), 2500);
