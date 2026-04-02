@@ -562,11 +562,12 @@
             const gid = rasterUploadGroupId;
             showRasterOverlay();
             const total = files.length;
-            let success = 0, failed = 0, lastError = '';
+            let success = 0, failed = 0;
             for (let i = 0; i < total; i++) {
                 const file = files[i];
                 const fd = new FormData();
                 fd.append('file', file);
+                fd.append('project', projetoAtual);
                 rasterAbortController = new AbortController();
                 try {
                     const xhr = new XMLHttpRequest();
@@ -580,27 +581,33 @@
                         xhr.onload = () => {
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try { resolve(JSON.parse(xhr.responseText)); }
-                                catch(e) { reject(new Error('Resposta inválida: ' + xhr.responseText.substring(0, 200))); }
+                                catch(e) { reject(new Error('Resposta inválida')); }
                             } else {
-                                reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.substring(0, 200)}`));
+                                reject(new Error('HTTP ' + xhr.status));
                             }
                         };
                         xhr.onerror = () => reject(new Error('Erro de rede'));
                         xhr.onabort = () => reject(new Error('Cancelado'));
-                        xhr.open('POST', `/api/raster-groups/${projetoAtual}/group/${gid}/upload`);
+                        xhr.open('POST', '/api/upload-raster');
                         xhr.send(fd);
                         rasterAbortController.signal.addEventListener('abort', () => xhr.abort());
                     });
-                    if (result && result.rasters && result.rasters.length > 0) {
-                        result.rasters.forEach(r => {
-                            rasterVisibility[r.id] = true;
-                            rasterGroupVisibility[gid] = true;
-                            if (!customRasters[r.id]) {
-                                const bounds = r.bounds || [[-90, -180], [90, 180]];
-                                customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, bounds, { opacity: 0.85, interactive: true });
-                                customRasters[r.id].addTo(map);
-                            }
-                        });
+                    if (result.success && result.id) {
+                        // Add to group metadata
+                        rasterVisibility[result.id] = true;
+                        rasterGroupVisibility[gid] = true;
+                        const rasterInfo = {id: result.id, name: result.name};
+                        if (result.bounds) rasterInfo.bounds = result.bounds;
+                        const grp = rasterGroups.find(g => g.id === gid);
+                        if (grp) {
+                            grp.rasters.push(rasterInfo);
+                            saveRasterGroups();
+                        }
+                        // Show on map
+                        if (result.bounds && !customRasters[result.id]) {
+                            customRasters[result.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${result.id}`, result.bounds, { opacity: 0.85, interactive: true });
+                            customRasters[result.id].addTo(map);
+                        }
                         if (result.bounds) map.fitBounds(result.bounds, { padding: [30, 30] });
                         success++;
                     } else {
@@ -608,20 +615,23 @@
                     }
                 } catch (e) {
                     if (e.message === 'Cancelado') { hideRasterOverlay(); return; }
-                    console.error('Raster upload error:', e.message);
-                    lastError = e.message;
                     failed++;
                 }
             }
             hideRasterOverlay();
             loadRasterGroups();
-            renderRasterMenu();
             if (failed === 0) {
                 showRasterFeedback('✅', `${success} raster(s) carregado(s)`, '#22c55e');
             } else {
-                showRasterFeedback('❌', `Falha: ${lastError || 'desconhecido'}`, '#ef4444');
+                showRasterFeedback('❌', `${failed} falhou`, '#ef4444');
             }
             document.getElementById('raster-upload-input').value = '';
+        }
+
+        async function saveRasterGroups() {
+            await fetch(`/api/raster-groups/${projetoAtual}`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(rasterGroups)
+            });
         }
 
         function isRasterVisible(gid, rid) {
