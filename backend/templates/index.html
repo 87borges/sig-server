@@ -396,7 +396,7 @@
                     allRow.style.borderBottom = '1px solid rgba(128,128,128,0.2)';
                     allRow.style.marginBottom = '2px';
                     const allVisible = metas.length > 0 && metas.every(m => customRasters[m.id]);
-                    allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters(!${allVisible})" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters(!${allVisible})" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
+                    allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
                     list.appendChild(allRow);
                     metas.forEach(m => {
                         const row = document.createElement('div');
@@ -415,8 +415,9 @@
                 });
         }
 
-        function toggleAllRasters(show) {
-            rasterMetas.forEach(m => toggleRaster(m.id, show));
+        function toggleAllRasters() {
+            const allVis = rasterMetas.length > 0 && rasterMetas.every(m => customRasters[m.id]);
+            rasterMetas.forEach(m => toggleRaster(m.id, !allVis));
         }
 
         function toggleRaster(rid, show) {
