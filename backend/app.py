@@ -107,62 +107,75 @@ def upload_raster():
     filename = f'{project}_raster.tif'
     src = os.path.join(RASTER_DIR, filename)
     f.save(src)
-    # Try to extract bounds and convert to PNG
+    # Extract bounds
     bounds = None
     try:
-        import subprocess
+        import subprocess, json
         r = subprocess.run(['gdalinfo', '-json', src], capture_output=True, text=True, timeout=30)
         if r.returncode == 0:
-            import json
             info = json.loads(r.stdout)
             corners = info.get('cornerCoordinates', {})
             if corners:
                 bounds = [[corners.get('lowerLeft', [0,0])[1], corners.get('lowerLeft', [0,0])[0]],
                           [corners.get('upperRight', [1,1])[1], corners.get('upperRight', [1,1])[0]]]
-        # Convert to PNG for browser
-        png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
-        subprocess.run(['gdal_translate', '-of', 'PNG', '-outsize', '4096', '4096', src, png_path],
-                      capture_output=True, timeout=60)
     except Exception:
         pass
-    # Fallback: convert with Pillow if GDAL not available
-    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
-    if not os.path.isfile(png_path):
+    if not bounds:
         try:
             from PIL import Image
             img = Image.open(src)
-            # Handle multi-band GeoTIFF: convert to RGB
-            if img.mode == 'RGBA':
-                img = img.convert('RGBA')
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
-            # Limit size for browser performance
+            if hasattr(img, 'tag_v2'):
+                tags = img.tag_v2
+                if 33922 in tags and 33550 in tags:
+                    tp = tags[33922]
+                    ps = tags[33550]
+                    bounds = [[tp[4] - img.size[1] * ps[1], tp[3]],
+                              [tp[4], tp[3] + img.size[0] * ps[0]]]
+        except Exception:
+            pass
+    # Convert to PNG using GDAL (preferred) or Pillow
+    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+    converted = False
+    try:
+        import subprocess
+        r = subprocess.run(['gdal_translate', '-of', 'PNG', '-scale', '-outsize', '4096', '4096', src, png_path],
+                          capture_output=True, timeout=60)
+        converted = r.returncode == 0 and os.path.isfile(png_path)
+    except Exception:
+        pass
+    if not converted:
+        try:
+            from PIL import Image, ImageOps
+            img = Image.open(src)
+            if img.mode not in ('RGB', 'RGBA'):
+                # For multi-band: use first 3 bands as RGB
+                bands = img.getbands()
+                if len(bands) >= 3:
+                    r_band = img.getchannel(bands[0])
+                    g_band = img.getchannel(bands[1])
+                    b_band = img.getchannel(bands[2])
+                    img = Image.merge('RGB', (r_band, g_band, b_band))
+                else:
+                    img = img.convert('RGB')
+            # Auto-contrast for better visibility
+            img = ImageOps.autocontrast(img, cutoff=1)
             img.thumbnail((4096, 4096), Image.LANCZOS)
             img.save(png_path, 'PNG')
-            # Extract bounds from TIF tags if available
-            if not bounds and hasattr(img, 'tag_v2'):
-                tags = img.tag_v2
-                if 33922 in tags:
-                    tp = tags[33922]
-                    if 33550 in tags:
-                        ps = tags[33550]
-                        x_size, y_size = img.size
-                        bounds = [[tp[4] - y_size * ps[1], tp[3]],
-                                  [tp[4], tp[3] + x_size * ps[0]]]
+            converted = True
         except Exception as e:
-            print(f'Pillow fallback error: {e}')
-    return jsonify({'success': True, 'filename': filename, 'bounds': bounds})
+            print(f'PNG conversion error: {e}')
+    print(f'Raster uploaded: {filename}, bounds={bounds}, png={converted}, size={os.path.getsize(src)}')
+    return jsonify({'success': True, 'filename': filename, 'bounds': bounds, 'has_png': converted})
 
 @app.route('/api/raster/<project>', methods=['GET'])
 def get_raster(project):
-    for ext in ['png', 'tif']:
-        path = os.path.join(RASTER_DIR, f'{project}_raster.{ext}')
-        if os.path.isfile(path):
-            size = os.path.getsize(path)
-            ctype = 'image/png' if ext == 'png' else 'image/tiff'
-            print(f'Serving raster: {ext} size={size}')
-            return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}', mimetype=ctype)
-    print(f'Raster not found for project: {project}')
+    # Serve PNG (converted) if available, else TIF raw
+    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+    if os.path.isfile(png_path):
+        return send_from_directory(RASTER_DIR, f'{project}_raster.png', mimetype='image/png')
+    tif_path = os.path.join(RASTER_DIR, f'{project}_raster.tif')
+    if os.path.isfile(tif_path):
+        return send_from_directory(RASTER_DIR, f'{project}_raster.tif', mimetype='image/tiff')
     return jsonify({'error': 'Raster não encontrado'}), 404
 
 if __name__ == '__main__':
