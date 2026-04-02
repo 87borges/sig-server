@@ -158,7 +158,7 @@
                     <div id="wayback-timeline" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:1000;background:linear-gradient(0deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
                         <div style="display:flex;align-items:center;gap:15px;color:white">
                             <span style="font-size:0.8em;opacity:0.7;white-space:nowrap">📅</span>
-                            <input type="range" id="wayback-slider" min="0" max="0" value="0" style="flex:1;accent-color:#fff;cursor:pointer">
+                            <input type="range" id="wayback-slider" min="0" max="0" value="0" oninput="aplicarWaybackSlider(this.value)" style="flex:1;accent-color:#fff;cursor:pointer">
                             <span id="wayback-date" style="font-size:0.85em;font-weight:600;min-width:110px;text-align:right">—</span>
                         </div>
                     </div>
@@ -213,7 +213,6 @@
                 const slider = document.getElementById('wayback-slider');
                 slider.max = waybackItems.length - 1;
                 slider.value = waybackItems.length - 1;
-                slider.oninput = function() { aplicarWaybackSlider(this.value); };
                 aplicarWaybackSlider(waybackItems.length - 1);
             } catch(e) { console.error(e); document.getElementById('wayback-date').textContent = 'Erro'; }
         }
@@ -223,12 +222,12 @@
             const item = waybackItems[idx];
             if (!item) return;
             document.getElementById('wayback-date').textContent = item.Name.replace('World Imagery (Wayback ', '').replace(')', '');
-            // Remove previous wayback layer
             if (waybackLayer) map.removeLayer(waybackLayer);
             waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
                 attribution: '© Esri Wayback', maxZoom: 19
             });
             waybackLayer.addTo(map);
+            waybackLayer.bringToFront();
         }
 
         function fecharWayback() {
