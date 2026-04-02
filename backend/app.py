@@ -98,13 +98,10 @@ def upload_raster():
     if not f.filename.lower().endswith(('.tif', '.tiff')):
         return jsonify({'error': 'Apenas .tif'}), 400
     project = request.form.get('project', 'default')
-    import shutil
-    for old in os.listdir(RASTER_DIR):
-        if old.startswith(f'{project}_'):
-            p = os.path.join(RASTER_DIR, old)
-            if os.path.isdir(p): shutil.rmtree(p)
-            else: os.remove(p)
-    filename = f'{project}_raster.tif'
+    # Use timestamp-based ID to support multiple rasters
+    import time, uuid
+    rid = str(uuid.uuid4())[:8]
+    filename = f'{project}_{rid}_raster.tif'
     src = os.path.join(RASTER_DIR, filename)
     f.save(src)
     # Extract bounds
@@ -133,8 +130,8 @@ def upload_raster():
                               [tp[4], tp[3] + img.size[0] * ps[0]]]
         except Exception:
             pass
-    # Convert to PNG using GDAL (preferred) or Pillow
-    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+    # Convert to PNG
+    png_path = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.png')
     converted = False
     try:
         import subprocess
@@ -148,35 +145,64 @@ def upload_raster():
             from PIL import Image, ImageOps
             img = Image.open(src)
             if img.mode not in ('RGB', 'RGBA'):
-                # For multi-band: use first 3 bands as RGB
                 bands = img.getbands()
                 if len(bands) >= 3:
-                    r_band = img.getchannel(bands[0])
-                    g_band = img.getchannel(bands[1])
-                    b_band = img.getchannel(bands[2])
-                    img = Image.merge('RGB', (r_band, g_band, b_band))
+                    img = Image.merge('RGB', (img.getchannel(bands[0]), img.getchannel(bands[1]), img.getchannel(bands[2])))
                 else:
                     img = img.convert('RGB')
-            # Auto-contrast for better visibility
             img = ImageOps.autocontrast(img, cutoff=1)
             img.thumbnail((4096, 4096), Image.LANCZOS)
             img.save(png_path, 'PNG')
             converted = True
         except Exception as e:
             print(f'PNG conversion error: {e}')
-    print(f'Raster uploaded: {filename}, bounds={bounds}, png={converted}, size={os.path.getsize(src)}')
-    return jsonify({'success': True, 'filename': filename, 'bounds': bounds, 'has_png': converted})
+    # Store metadata
+    import json
+    meta_path = os.path.join(RASTER_DIR, f'{project}_meta.json')
+    metas = []
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            metas = json.load(mf)
+    display_name = secure_filename(f.filename).rsplit('.', 1)[0]
+    metas.append({'id': rid, 'name': display_name, 'bounds': bounds, 'has_png': converted})
+    with open(meta_path, 'w') as mf:
+        json.dump(metas, mf)
+    print(f'Raster uploaded: {display_name} ({rid}), bounds={bounds}')
+    return jsonify({'success': True, 'id': rid, 'name': display_name, 'bounds': bounds, 'has_png': converted})
 
-@app.route('/api/raster/<project>', methods=['GET'])
-def get_raster(project):
-    # Serve PNG (converted) if available, else TIF raw
-    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+@app.route('/api/rasters/<project>', methods=['GET'])
+def list_rasters(project):
+    import json
+    meta_path = os.path.join(RASTER_DIR, f'{project}_meta.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            return jsonify(json.load(mf))
+    return jsonify([])
+
+@app.route('/api/raster/<project>/<rid>', methods=['GET'])
+def get_raster(project, rid):
+    png_path = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.png')
     if os.path.isfile(png_path):
-        return send_from_directory(RASTER_DIR, f'{project}_raster.png', mimetype='image/png')
-    tif_path = os.path.join(RASTER_DIR, f'{project}_raster.tif')
+        return send_from_directory(RASTER_DIR, f'{project}_{rid}_raster.png', mimetype='image/png')
+    tif_path = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.tif')
     if os.path.isfile(tif_path):
-        return send_from_directory(RASTER_DIR, f'{project}_raster.tif', mimetype='image/tiff')
+        return send_from_directory(RASTER_DIR, f'{project}_{rid}_raster.tif', mimetype='image/tiff')
     return jsonify({'error': 'Raster não encontrado'}), 404
+
+@app.route('/api/raster/<project>/<rid>', methods=['DELETE'])
+def delete_raster(project, rid):
+    import json, shutil
+    for ext in ['tif', 'png']:
+        p = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.{ext}')
+        if os.path.isfile(p): os.remove(p)
+    meta_path = os.path.join(RASTER_DIR, f'{project}_meta.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            metas = json.load(mf)
+        metas = [m for m in metas if m['id'] != rid]
+        with open(meta_path, 'w') as mf:
+            json.dump(metas, mf)
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

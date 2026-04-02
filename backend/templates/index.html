@@ -156,12 +156,10 @@
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
                         <div style="border-top:1px solid #eee;margin:6px 15px"></div>
+                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Personalizados</div>
+                        <div id="raster-list"></div>
                         <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;color:#1a1a1a;font-weight:600"><label style="cursor:pointer">➕ Adicionar raster (.tif)</label></div>
                         <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" onchange="uploadRaster(this.files)">
-                    </div>
-                    <!-- Custom Raster Layer (overlay) -->
-                    <div id="raster-layer-ctrl" style="display:none;position:absolute;bottom:55px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:0.9em" onclick="toggleRaster()">
-                        🗺️ Raster
                     </div>
                     <!-- Wayback Timeline -->
                     <div id="wayback-timeline" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
@@ -249,8 +247,8 @@
 
         // ===== RASTER UPLOAD =====
         let customRaster = null;
-        let rasterVisible = false;
         let rasterBounds = null;
+        let rasterMetas = [];
 
         function uploadRaster(files) {
             if (!files.length || !projetoAtual) return;
@@ -261,13 +259,8 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        rasterBounds = data.bounds;
-                        document.getElementById('raster-layer-ctrl').style.display = 'block';
-                        // Auto-show raster
-                        rasterVisible = true;
-                        loadCustomRaster();
-                        document.getElementById('raster-layer-ctrl').style.background = '#1a1a1a';
-                        document.getElementById('raster-layer-ctrl').style.color = 'white';
+                        loadRasterList();
+                        selectRaster(data.id);
                     } else {
                         alert(data.error || 'Erro ao enviar');
                     }
@@ -276,34 +269,39 @@
             document.getElementById('raster-upload-input').value = '';
         }
 
-        function loadCustomRaster() {
-            if (customRaster) map.removeLayer(customRaster);
+        function loadRasterList() {
             if (!projetoAtual) return;
-            const bounds = rasterBounds || [[-23, -47], [-22, -46]];
-            customRaster = L.imageOverlay(`/api/raster/${projetoAtual}`, bounds, {
-                opacity: 0.85, interactive: true
-            }).addTo(map);
-            map.fitBounds(bounds, { padding: [30, 30] });
+            fetch(`/api/rasters/${projetoAtual}`)
+                .then(r => r.json())
+                .then(metas => {
+                    rasterMetas = metas;
+                    const list = document.getElementById('raster-list');
+                    list.innerHTML = '';
+                    metas.forEach(m => {
+                        const row = document.createElement('div');
+                        row.className = 'basemap-row';
+                        row.style.position = 'relative';
+                        row.innerHTML = `<input type="radio" name="basemap" value="raster_${m.id}" id="rb_${m.id}" onchange="selectRaster('${m.id}')"><label for="rb_${m.id}">${m.name}</label>`;
+                        list.appendChild(row);
+                    });
+                });
         }
 
-        function toggleRaster() {
-            rasterVisible = !rasterVisible;
-            if (rasterVisible) {
-                loadCustomRaster();
-                document.getElementById('raster-layer-ctrl').style.background = '#1a1a1a';
-                document.getElementById('raster-layer-ctrl').style.color = 'white';
-            } else {
-                if (customRaster) map.removeLayer(customRaster);
-                document.getElementById('raster-layer-ctrl').style.background = 'white';
-                document.getElementById('raster-layer-ctrl').style.color = '';
-            }
+        function selectRaster(rid) {
+            const meta = rasterMetas.find(m => m.id === rid);
+            if (!meta || !meta.bounds) return;
+            rasterBounds = meta.bounds;
+            if (customRaster) map.removeLayer(customRaster);
+            customRaster = L.imageOverlay(`/api/raster/${projetoAtual}/${rid}`, meta.bounds, {
+                opacity: 0.85, interactive: true
+            }).addTo(map);
+            map.fitBounds(meta.bounds, { padding: [30, 30] });
+            document.getElementById('basemap-menu').style.display = 'none';
         }
 
         function checkCustomRaster() {
             if (!projetoAtual) return;
-            fetch(`/api/raster/${projetoAtual}`).then(r => {
-                if (r.ok) document.getElementById('raster-layer-ctrl').style.display = 'block';
-            }).catch(() => {});
+            loadRasterList();
         }
 
         // ===== PROJETOS =====
