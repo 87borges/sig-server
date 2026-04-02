@@ -2,6 +2,7 @@
 SIG Server — Plataforma GIS Online
 """
 import os
+import requests as req
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
 
@@ -9,6 +10,9 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 ALLOWED_EXTENSIONS = {'shp', 'shx', 'dbf', 'prj', 'kml', 'kmz', 'gpkg', 'zip'}
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# In-memory tile cache (max 5000 tiles)
+_tile_cache = {}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -67,10 +71,20 @@ def get_file(project, filename):
 
 @app.route('/api/wayback-tile/<wb_id>/<wb_m>/<int:z>/<int:y>/<int:x>', methods=['GET'])
 def wayback_tile(wb_id, wb_m, z, y, x):
-    import requests as req
+    cache_key = f"{wb_id}_{wb_m}_{z}_{y}_{x}"
+    if cache_key in _tile_cache:
+        data, ctype = _tile_cache[cache_key]
+        return (data, 200, {'Content-Type': ctype, 'Cache-Control': 'public, max-age=604800', 'X-Cache': 'HIT'})
     url = f'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/{wb_id}/MapServer/tile/{wb_m}/{z}/{y}/{x}'
-    r = req.get(url, timeout=10)
-    return (r.content, 200, {'Content-Type': r.headers.get('Content-Type', 'image/jpeg'), 'Cache-Control': 'public, max-age=86400'})
+    try:
+        r = req.get(url, timeout=8)
+        ctype = r.headers.get('Content-Type', 'image/jpeg')
+        if len(_tile_cache) > 5000:
+            _tile_cache.clear()
+        _tile_cache[cache_key] = (r.content, ctype)
+        return (r.content, 200, {'Content-Type': ctype, 'Cache-Control': 'public, max-age=604800', 'X-Cache': 'MISS'})
+    except:
+        return ('', 404)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

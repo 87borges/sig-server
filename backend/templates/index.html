@@ -222,12 +222,16 @@
             const item = waybackItems[idx];
             if (!item) return;
             document.getElementById('wayback-date').textContent = item.Name.replace('World Imagery (Wayback ', '').replace(')', '');
-            if (waybackLayer) map.removeLayer(waybackLayer);
-            waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
-                attribution: '© Esri Wayback', maxZoom: 19
-            });
-            waybackLayer.addTo(map);
-            waybackLayer.bringToFront();
+            clearTimeout(waybackTimeout);
+            waybackTimeout = setTimeout(() => {
+                if (waybackLayer) map.removeLayer(waybackLayer);
+                waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
+                    attribution: '© Esri Wayback', maxZoom: 19,
+                    maxNativeZoom: 14, keepBuffer: 1, updateWhenIdle: true
+                });
+                waybackLayer.addTo(map);
+                waybackLayer.bringToFront();
+            }, 250);
         }
 
         function fecharWayback() {
