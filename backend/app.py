@@ -257,6 +257,134 @@ def delete_raster(project, rid):
             json.dump(metas, mf)
     return jsonify({'success': True})
 
+# ===== RASTER GROUPS =====
+@app.route('/api/raster-groups/<project>', methods=['GET'])
+def list_raster_groups(project):
+    import json
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    if os.path.isfile(p):
+        with open(p) as f: return jsonify(json.load(f))
+    return jsonify([])
+
+@app.route('/api/raster-groups/<project>', methods=['POST'])
+def save_raster_groups(project):
+    import json
+    data = request.get_json() or []
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    with open(p, 'w') as f: json.dump(data, f)
+    return jsonify({'success': True})
+
+@app.route('/api/raster-groups/<project>/group', methods=['POST'])
+def create_raster_group(project):
+    import json, uuid
+    data = request.get_json() or {}
+    name = data.get('name', 'Novo Grupo')
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    groups = []
+    if os.path.isfile(p):
+        with open(p) as f: groups = json.load(f)
+    gid = str(uuid.uuid4())[:8]
+    groups.append({'id': gid, 'name': name, 'rasters': []})
+    with open(p, 'w') as f: json.dump(groups, f)
+    return jsonify({'success': True, 'id': gid})
+
+@app.route('/api/raster-groups/<project>/group/<gid>', methods=['PUT'])
+def rename_raster_group(project, gid):
+    import json
+    data = request.get_json() or {}
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    if os.path.isfile(p):
+        with open(p) as f: groups = json.load(f)
+        for g in groups:
+            if g['id'] == gid:
+                g['name'] = data.get('name', g['name']); break
+        with open(p, 'w') as f: json.dump(groups, f)
+    return jsonify({'success': True})
+
+@app.route('/api/raster-groups/<project>/group/<gid>', methods=['DELETE'])
+def delete_raster_group(project, gid):
+    import json
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    if os.path.isfile(p):
+        with open(p) as f: groups = json.load(f)
+        for g in groups:
+            if g['id'] == gid:
+                for r in g.get('rasters', []):
+                    for ext in ['tif', 'png']:
+                        fp = os.path.join(RASTER_DIR, f'{project}_{r["id"]}_raster.{ext}')
+                        if os.path.isfile(fp): os.remove(fp)
+                break
+        groups = [g for g in groups if g['id'] != gid]
+        with open(p, 'w') as f: json.dump(groups, f)
+    return jsonify({'success': True})
+
+@app.route('/api/raster-groups/<project>/group/<gid>/upload', methods=['POST'])
+def upload_raster_to_group(project, gid):
+    import json, uuid, subprocess
+    files = request.files.getlist('file')
+    if not files: return jsonify({'error': 'Nenhum arquivo'}), 400
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    groups = []
+    if os.path.isfile(p):
+        with open(p) as f: groups = json.load(f)
+    all_bounds = []
+    results = []
+    for file in files:
+        if not file.filename.lower().endswith(('.tif', '.tiff')): continue
+        rid = str(uuid.uuid4())[:8]
+        fname = f'{project}_{rid}_raster.tif'
+        tif_path = os.path.join(RASTER_DIR, fname)
+        file.save(tif_path)
+        # Get bounds
+        bounds = None
+        try:
+            r = subprocess.run(['gdalinfo', '-json', tif_path], capture_output=True, text=True, timeout=60)
+            if r.returncode == 0:
+                info = json.loads(r.stdout)
+                corners = [c for c in info.get('cornerCoordinates', {}).values() if isinstance(c, dict) and 'x' in c]
+                if corners:
+                    lons = [c['x'] for c in corners]; lats = [c['y'] for c in corners]
+                    bounds = [[min(lats), min(lons)], [max(lats), max(lons)]]
+        except: pass
+        if not bounds:
+            try:
+                from PIL import Image
+                img = Image.open(tif_path)
+                bounds = [[-90, -180], [90, 180]]
+                img.close()
+            except: pass
+        name = file.filename.rsplit('.', 1)[0]
+        raster_info = {'id': rid, 'name': name}
+        if bounds: raster_info['bounds'] = bounds
+        results.append(raster_info)
+        if bounds: all_bounds.extend(bounds)
+    for g in groups:
+        if g['id'] == gid:
+            g.setdefault('rasters', []).extend(results)
+            break
+    with open(p, 'w') as f: json.dump(groups, f)
+    resp = {'success': True, 'rasters': results}
+    if all_bounds:
+        lons = [b[0][1] for b in all_bounds] + [b[1][1] for b in all_bounds]
+        lats = [b[0][0] for b in all_bounds] + [b[1][0] for b in all_bounds]
+        resp['bounds'] = [[min(lats), min(lons)], [max(lats), max(lons)]]
+    return jsonify(resp)
+
+@app.route('/api/raster-groups/<project>/group/<gid>/raster/<rid>', methods=['DELETE'])
+def delete_raster_from_group(project, gid, rid):
+    import json
+    for ext in ['tif', 'png']:
+        fp = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.{ext}')
+        if os.path.isfile(fp): os.remove(fp)
+    p = os.path.join(RASTER_DIR, f'{project}_rgroups.json')
+    if os.path.isfile(p):
+        with open(p) as f: groups = json.load(f)
+        for g in groups:
+            if g['id'] == gid:
+                g['rasters'] = [r for r in g.get('rasters', []) if r['id'] != rid]; break
+        with open(p, 'w') as f: json.dump(groups, f)
+    return jsonify({'success': True})
+
 # ===== VECTOR GROUPS =====
 VECTOR_DIR = os.path.join(os.path.dirname(__file__), 'vectors')
 os.makedirs(VECTOR_DIR, exist_ok=True)

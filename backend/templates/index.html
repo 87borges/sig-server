@@ -157,9 +157,11 @@
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_ter',this)">Terreno</div></div>
                         <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
-                        <div id="raster-list"></div>
-                        <div class="basemap-row" onclick="document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Adicionar (.tif)</label></div>
-                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
+                        <div id="raster-groups-list"></div>
+                        <div class="basemap-row" onclick="createRasterGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
+                        <div class="basemap-row" onclick="document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">📎 Adicionar (.tif)</label></div>
+                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRastersToGroup(this.files)">
+                        <input type="file" id="raster-upload-input-legacy" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
                     </div>
                     <!-- Vector Menu -->
                     <div id="vector-btn" onmouseenter="openVectorMenu()" onmouseleave="closeVectorMenu()" style="position:absolute;bottom:20px;right:60px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">📐</div>
@@ -472,80 +474,153 @@
             setTimeout(() => document.body.removeChild(el), 2500);
         }
 
-        function loadRasterList() {
+        // ===== RASTER GROUPS =====
+        let rasterUploadGroupId = null;
+
+        function loadRasterGroups() {
             if (!projetoAtual) return;
-            fetch(`/api/rasters/${projetoAtual}`)
+            fetch(`/api/raster-groups/${projetoAtual}`)
                 .then(r => r.json())
-                .then(metas => {
-                    rasterMetas = metas;
-                    const list = document.getElementById('raster-list');
-                    list.innerHTML = '';
-                    // Toggle todos
-                    if (metas.length > 0) {
-                    const allRow = document.createElement('div');
-                    allRow.className = 'basemap-row';
-                    allRow.style.display = 'flex';
-                    allRow.style.alignItems = 'center';
-                    allRow.style.gap = '6px';
-                    allRow.style.borderBottom = '1px solid rgba(128,128,128,0.2)';
-                    allRow.style.marginBottom = '2px';
-                    const allVisible = metas.length > 0 && metas.every(m => rasterVisibility[m.id] !== false);
-                    allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
-                    list.appendChild(allRow);
-                    }
-                    metas.forEach(m => {
-                        const row = document.createElement('div');
-                        row.className = 'basemap-row';
-                        row.style.display = 'flex';
-                        row.style.alignItems = 'center';
-                        row.style.gap = '6px';
-                        const visible = rasterVisibility[m.id] !== false;
-                        row.innerHTML = `
-                            <span id="eye_${m.id}" onclick="toggleRaster('${m.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="${visible ? 'Ocultar' : 'Mostrar'}">${visible ? '👁️' : '🙈'}</span>
-                            <span onclick="toggleRaster('${m.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</span>
-                            <span onclick="deleteRaster('${m.id}')" style="cursor:pointer;opacity:0.5;font-size:0.78em;flex-shrink:0;padding:2px 4px" title="Excluir raster">🗑️</span>
-                        `;
-                        list.appendChild(row);
-                    });
+                .then(groups => {
+                    rasterGroups = groups;
+                    renderRasterMenu();
                 });
         }
 
-        function toggleAllRasters() {
-            const allVis = rasterMetas.length > 0 && rasterMetas.every(m => rasterVisibility[m.id]);
-            rasterMetas.forEach(m => toggleRaster(m.id, !allVis));
+        function renderRasterMenu() {
+            const list = document.getElementById('raster-groups-list');
+            if (!list) return;
+            list.innerHTML = '';
+            rasterGroups.forEach(g => {
+                const gdiv = document.createElement('div');
+                gdiv.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.1)';
+                const groupVis = rasterGroupVisibility[g.id] !== false;
+                const header = document.createElement('div');
+                header.className = 'basemap-row';
+                header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 12px;font-weight:600;font-size:0.72em';
+                header.innerHTML = `
+                    <span onclick="toggleAllRasters('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
+                    <span onclick="renameRasterGroup('${g.id}','${g.name}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
+                    <span onclick="promptRasterUpload('${g.id}')" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Adicionar raster">➕</span>
+                    <span onclick="deleteRasterGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir grupo">🗑️</span>
+                `;
+                gdiv.appendChild(header);
+                g.rasters.forEach(r => {
+                    const vis = rasterGroupVisibility[g.id] !== false && rasterVisibility[r.id] !== false;
+                    const row = document.createElement('div');
+                    row.className = 'basemap-row';
+                    row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
+                    row.innerHTML = `
+                        <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                        <span onclick="toggleRaster('${g.id}','${r.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${r.name}</span>
+                        <span onclick="deleteRasterFromGroup('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Excluir raster">🗑️</span>
+                    `;
+                    gdiv.appendChild(row);
+                });
+                list.appendChild(gdiv);
+            });
         }
 
-        function toggleRaster(rid, show) {
-            if (show === undefined) show = !rasterVisibility[rid];
-            const meta = rasterMetas.find(m => m.id === rid);
-            if (!meta || !meta.bounds) return;
-            rasterVisibility[rid] = show;
-            if (show) {
-                if (!customRasters[rid]) {
-                    customRasters[rid] = L.imageOverlay(`/api/raster/${projetoAtual}/${rid}`, meta.bounds, {
-                        opacity: 0.85, interactive: true
-                    });
-                }
-                customRasters[rid].addTo(map);
-                map.fitBounds(meta.bounds, { padding: [30, 30] });
-            } else {
-                if (customRasters[rid]) {
-                    map.removeLayer(customRasters[rid]);
-                }
-            }
-            // Atualizar ícone do olho
-            const eye = document.getElementById('eye_' + rid);
-            if (eye) {
-                eye.textContent = show ? '👁️' : '🙈';
-                eye.title = show ? 'Ocultar' : 'Mostrar';
-            }
-            // Atualizar ícone "Todos"
-            const allEye = document.getElementById('eye_all');
-            if (allEye) {
-                const allVis = rasterMetas.length > 0 && rasterMetas.every(m => rasterVisibility[m.id]);
-                allEye.textContent = allVis ? '👁️' : '🙈';
-            }
+        function createRasterGroup() {
+            const name = prompt('Nome do grupo:');
+            if (!name) return;
+            fetch(`/api/raster-groups/${projetoAtual}`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
+            }).then(r => r.json()).then(() => loadRasterGroups());
         }
+
+        function renameRasterGroup(gid, oldName) {
+            const name = prompt('Novo nome:', oldName);
+            if (!name || name === oldName) return;
+            fetch(`/api/raster-groups/${projetoAtual}/group/${gid}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
+            }).then(() => loadRasterGroups());
+        }
+
+        function deleteRasterGroup(gid) {
+            if (!confirm('Excluir grupo e todos os rasters?')) return;
+            const group = rasterGroups.find(g => g.id === gid);
+            if (group) group.rasters.forEach(r => {
+                if (customRasters[r.id]) { map.removeLayer(customRasters[r.id]); delete customRasters[r.id]; }
+                delete rasterVisibility[r.id];
+            });
+            fetch(`/api/raster-groups/${projetoAtual}/group/${gid}`, { method: 'DELETE' }).then(() => loadRasterGroups());
+        }
+
+        function deleteRasterFromGroup(gid, rid) {
+            if (!confirm('Excluir este raster?')) return;
+            if (customRasters[rid]) { map.removeLayer(customRasters[rid]); delete customRasters[rid]; }
+            delete rasterVisibility[rid];
+            fetch(`/api/raster-groups/${projetoAtual}/group/${gid}/raster/${rid}`, { method: 'DELETE' }).then(() => loadRasterGroups());
+        }
+
+        function promptRasterUpload(gid) {
+            rasterUploadGroupId = gid;
+            document.getElementById('raster-upload-input').click();
+        }
+
+        async function uploadRastersToGroup(files) {
+            if (!files.length || !rasterUploadGroupId || !projetoAtual) return;
+            const gid = rasterUploadGroupId;
+            const fd = new FormData();
+            for (let i = 0; i < files.length; i++) fd.append('file', files[i]);
+            const resp = await fetch(`/api/raster-groups/${projetoAtual}/group/${gid}/upload`, { method: 'POST', body: fd });
+            const result = await resp.json();
+            if (result.rasters) {
+                result.rasters.forEach(r => {
+                    rasterVisibility[r.id] = true;
+                    if (r.bounds) {
+                        customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, r.bounds, { opacity: 0.85, interactive: true });
+                        if (rasterGroupVisibility[gid] !== false) customRasters[r.id].addTo(map);
+                    }
+                });
+                map.fitBounds(result.bounds, { padding: [30, 30] });
+            }
+            loadRasterGroups();
+            document.getElementById('raster-upload-input').value = '';
+        }
+
+        function isRasterVisible(gid, rid) {
+            return rasterGroupVisibility[gid] !== false && rasterVisibility[rid] !== false;
+        }
+
+        function toggleAllRasters(gid) {
+            const groupWasVisible = rasterGroupVisibility[gid] !== false;
+            rasterGroupVisibility[gid] = !groupWasVisible;
+            const group = rasterGroups.find(g => g.id === gid);
+            if (!group) return;
+            group.rasters.forEach(r => {
+                if (!groupWasVisible) {
+                    if (rasterVisibility[r.id] !== false) {
+                        if (customRasters[r.id]) customRasters[r.id].addTo(map);
+                    }
+                } else {
+                    if (customRasters[r.id]) map.removeLayer(customRasters[r.id]);
+                }
+            });
+            renderRasterMenu();
+        }
+
+        function toggleRaster(gid, rid) {
+            const wasVisible = isRasterVisible(gid, rid);
+            if (wasVisible) {
+                rasterVisibility[rid] = false;
+                if (customRasters[rid]) map.removeLayer(customRasters[rid]);
+            } else {
+                rasterVisibility[rid] = true;
+                rasterGroupVisibility[gid] = true;
+                if (customRasters[rid]) customRasters[rid].addTo(map);
+            }
+            renderRasterMenu();
+        }
+
+        function loadRasterList() {
+            // Legacy compatibility — redirect to groups
+            if (!projetoAtual) return;
+            loadRasterGroups();
+        }
+
+        function toggleAllRastersLegacy() {}
 
         function deleteRaster(rid) {
             if (!confirm('Excluir este raster?')) return;
@@ -559,8 +634,11 @@
         let vectorTimeout = null;
         let vectorGroups = [];
         let vectorLayers = {};
-        let vectorVisibility = {};
+        let vectorVisibility = {};      // individual: true/false (undefined = not set = visible)
+        let vectorGroupVisibility = {}; // group: true/false (undefined = visible)
         let vectorUploadGroupId = null;
+        let rasterGroupVisibility = {};
+        let rasterGroups = [];
 
         function openVectorMenu() {
             clearTimeout(vectorTimeout);
@@ -601,9 +679,10 @@
                         const header = document.createElement('div');
                         header.className = 'basemap-row';
                         header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
-                        const allVis = g.vectors.length > 0 && g.vectors.every(v => vectorVisibility[v.id] !== false);
+                        const allVis = g.vectors.length > 0 && g.vectors.every(v => isVectorVisible(g.id, v.id));
+                        const groupVis = vectorGroupVisibility[g.id] !== false;
                         header.innerHTML = `
-                            <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${allVis ? '👁️' : '🙈'}</span>
+                            <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
                             <span onclick="renameVectorGroup('${g.id}','${g.name}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                             <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
                             <span onclick="deleteVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.75em;flex-shrink:0" title="Excluir grupo">🗑️</span>
@@ -640,7 +719,7 @@
                                     renderVectorMenu();
                                 } catch(err) {}
                             });
-                            const vis = vectorVisibility[v.id] !== false;
+                            const vis = isVectorVisible(g.id, v.id);
                             const color = v.color || '#e74c3c';
                             const vtype = v._detectedType || 'polygon';
                             let legendHtml = '';
@@ -721,12 +800,18 @@
             document.getElementById('vector-upload-input').value = '';
         }
 
+        function isVectorVisible(gid, vid) {
+            return vectorGroupVisibility[gid] !== false && vectorVisibility[vid] !== false;
+        }
+
         async function toggleVector(gid, vid) {
-            const show = !vectorVisibility[vid];
-            vectorVisibility[vid] = show;
-            const eye = document.getElementById('veye_' + vid);
-            if (eye) eye.textContent = show ? '👁️' : '🙈';
-            if (show) {
+            const wasVisible = isVectorVisible(gid, vid);
+            if (wasVisible) {
+                vectorVisibility[vid] = false;
+                if (vectorLayers[vid]) map.removeLayer(vectorLayers[vid]);
+            } else {
+                vectorVisibility[vid] = true;
+                vectorGroupVisibility[gid] = true;
                 if (!vectorLayers[vid]) {
                     const group = vectorGroups.find(g => g.id === gid);
                     const vec = group?.vectors.find(v => v.id === vid);
@@ -819,9 +904,8 @@
                     } catch(e) { console.error(e); alert('Erro ao carregar vetor: ' + e.message); }
                 }
                 if (vectorLayers[vid]) map.addLayer(vectorLayers[vid]);
-            } else {
-                if (vectorLayers[vid]) map.removeLayer(vectorLayers[vid]);
             }
+            renderVectorMenu();
         }
 
         function changeVectorColor(gid, vid) {}
@@ -1029,10 +1113,23 @@
         }
 
         function toggleAllVectors(gid) {
+            const groupWasVisible = vectorGroupVisibility[gid] !== false;
+            vectorGroupVisibility[gid] = !groupWasVisible;
             const group = vectorGroups.find(g => g.id === gid);
             if (!group) return;
-            const allVis = group.vectors.every(v => vectorVisibility[v.id] !== false);
-            group.vectors.forEach(v => toggleVector(gid, v.id));
+            group.vectors.forEach(v => {
+                if (!groupWasVisible) {
+                    // Showing group: show all except individually hidden
+                    if (vectorVisibility[v.id] !== false) {
+                        if (vectorLayers[v.id]) map.addLayer(vectorLayers[v.id]);
+                        else toggleVector(gid, v.id);
+                    }
+                } else {
+                    // Hiding group: hide all
+                    if (vectorLayers[v.id]) map.removeLayer(vectorLayers[v.id]);
+                }
+            });
+            renderVectorMenu();
         }
 
         function checkCustomRaster() {
