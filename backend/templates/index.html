@@ -359,6 +359,7 @@
 
         function fecharWayback() {
             if (waybackLayer) { map.removeLayer(waybackLayer); waybackLayer = null; }
+            document.getElementById('wayback-timeline').style.display = 'none';
         }
 
         // ===== RASTER UPLOAD =====
