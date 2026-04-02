@@ -141,10 +141,15 @@
                 <div style="flex:1;position:relative"><div id="map"></div>
                     <!-- Basemap selector flutuante -->
                     <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
-                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:160px">
+                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:180px">
                         <div class="basemap-row"><input type="radio" name="basemap" value="osm" checked onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>OpenStreetMap</label></div>
-                        <div class="basemap-row"><input type="radio" name="basemap" value="satelite" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (ESRI)</label></div>
-                        <div class="basemap-row"><input type="radio" name="basemap" value="topo" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Topográfico (ESRI)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (ESRI)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="esri_topo" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Topográfico (ESRI)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="google_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (Google)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="google_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido (Google)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="google_ter" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Terreno (Google)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="bing_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (Bing)</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="bing_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido (Bing)</label></div>
                     </div>
                 </div>
             </div>
@@ -166,10 +171,18 @@
 
         function trocarBase(tipo) {
             map.removeLayer(baseLayer);
-            if (tipo === 'osm') baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM', maxZoom: 19 });
-            else if (tipo === 'satelite') baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
-            else if (tipo === 'topo') baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 });
-            baseLayer.addTo(map);
+            const bases = {
+                'osm': ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', '© OSM', 19],
+                'esri_sat': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', '© Esri', 19],
+                'esri_topo': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', '© Esri', 19],
+                'google_sat': ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', '© Google', 20],
+                'google_hyb': ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', '© Google', 20],
+                'google_ter': ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', '© Google', 20],
+                'bing_sat': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', '© Bing/Esri', 19],
+                'bing_hyb': ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', '© Bing/Google', 20]
+            };
+            const [url, attr, max] = bases[tipo] || bases['osm'];
+            baseLayer = L.tileLayer(url, { attribution: attr, maxZoom: max }).addTo(map);
         }
 
         // ===== PROJETOS =====
