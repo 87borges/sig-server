@@ -614,6 +614,32 @@
                             const row = document.createElement('div');
                             row.className = 'basemap-row';
                             row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
+                            row.draggable = true;
+                            row.dataset.gid = g.id;
+                            row.dataset.vid = v.id;
+                            row.addEventListener('dragstart', e => {
+                                e.dataTransfer.setData('text/plain', JSON.stringify({gid:g.id, vid:v.id, idx: vi}));
+                                row.style.opacity = '0.4';
+                            });
+                            row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+                            row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid #333'; });
+                            row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
+                            row.addEventListener('drop', e => {
+                                e.preventDefault();
+                                row.style.borderTop = '';
+                                try {
+                                    const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                    if (from.gid !== g.id) return;
+                                    const grp = vectorGroups.find(x => x.id === g.id);
+                                    if (!grp) return;
+                                    const [moved] = grp.vectors.splice(from.idx, 1);
+                                    const toIdx = grp.vectors.findIndex(x => x.id === v.id);
+                                    grp.vectors.splice(toIdx, 0, moved);
+                                    saveVectorGroups();
+                                    refreshVectorZOrder();
+                                    renderVectorMenu();
+                                } catch(err) {}
+                            });
                             const vis = !!vectorVisibility[v.id];
                             const color = v.color || '#e74c3c';
                             const vtype = v._detectedType || 'polygon';
@@ -630,6 +656,7 @@
                                 legendHtml = `<span style="display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
                             }
                             row.innerHTML = `
+                                <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                                 <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
                                 <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                                 <span onclick="toggleVector('${g.id}','${v.id}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
@@ -980,6 +1007,17 @@
             }
             closeVectorEditor();
             loadVectorGroups();
+        }
+
+        function refreshVectorZOrder() {
+            // Add layers in reverse order so first in list = top of map
+            vectorGroups.forEach(g => {
+                g.vectors.slice().reverse().forEach(v => {
+                    if (vectorLayers[v.id] && vectorVisibility[v.id]) {
+                        vectorLayers[v.id].bringToFront();
+                    }
+                });
+            });
         }
 
         async function saveVectorGroups() {
