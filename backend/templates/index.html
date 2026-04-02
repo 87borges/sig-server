@@ -499,7 +499,7 @@
                         row.style.display = 'flex';
                         row.style.alignItems = 'center';
                         row.style.gap = '6px';
-                        const visible = !!rasterVisibility[m.id];
+                        const visible = rasterVisibility[m.id] !== false;
                         row.innerHTML = `
                             <span id="eye_${m.id}" onclick="toggleRaster('${m.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="${visible ? 'Ocultar' : 'Mostrar'}">${visible ? '👁️' : '🙈'}</span>
                             <span onclick="toggleRaster('${m.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</span>
@@ -640,7 +640,7 @@
                                     renderVectorMenu();
                                 } catch(err) {}
                             });
-                            const vis = !!vectorVisibility[v.id];
+                            const vis = vectorVisibility[v.id] !== false;
                             const color = v.color || '#e74c3c';
                             const vtype = v._detectedType || 'polygon';
                             let legendHtml = '';
