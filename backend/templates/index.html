@@ -489,33 +489,94 @@
             const list = document.getElementById('raster-groups-list');
             if (!list) return;
             list.innerHTML = '';
-            rasterGroups.forEach(g => {
+            rasterGroups.forEach((g, gi) => {
                 const gdiv = document.createElement('div');
                 gdiv.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.1)';
+                gdiv.draggable = true;
+                gdiv.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-group', gid:g.id, idx:gi}));
+                    gdiv.style.opacity = '0.4';
+                });
+                gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
+                gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
+                gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
+                gdiv.addEventListener('drop', e => {
+                    e.preventDefault(); gdiv.style.borderTop = '';
+                    try {
+                        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        if (from.type !== 'raster-group') return;
+                        const [moved] = rasterGroups.splice(from.idx, 1);
+                        const toIdx = rasterGroups.findIndex(x => x.id === g.id);
+                        rasterGroups.splice(toIdx, 0, moved);
+                        saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
+                    } catch(err) {}
+                });
                 const groupVis = rasterGroupVisibility[g.id] !== false;
                 const header = document.createElement('div');
                 header.className = 'basemap-row';
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 12px;font-weight:600;font-size:0.72em';
                 header.innerHTML = `
+                    <span style="cursor:grab;font-size:0.65em;opacity:0.4;flex-shrink:0;user-select:none">⠿</span>
                     <span onclick="toggleAllRasters('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
-                    <span onclick="renameRasterGroup('${g.id}','${g.name}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
+                    <span style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
+                    <span onclick="renameRasterGroup('${g.id}','${g.name}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Renomear">✏️</span>
                     <span onclick="promptRasterUpload('${g.id}')" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Adicionar raster">➕</span>
                     <span onclick="deleteRasterGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir grupo">🗑️</span>
                 `;
                 gdiv.appendChild(header);
-                g.rasters.forEach(r => {
+                g.rasters.forEach((r, ri) => {
                     const vis = rasterGroupVisibility[g.id] !== false && rasterVisibility[r.id] !== false;
                     const row = document.createElement('div');
                     row.className = 'basemap-row';
                     row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
+                    row.draggable = true;
+                    row.addEventListener('dragstart', e => {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-item', gid:g.id, rid:r.id, idx:ri}));
+                        row.style.opacity = '0.4';
+                    });
+                    row.addEventListener('dragend', () => { row.style.opacity = '1'; });
+                    row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
+                    row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
+                    row.addEventListener('drop', e => {
+                        e.preventDefault(); row.style.borderTop = '';
+                        try {
+                            const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                            if (from.type !== 'raster-item' || from.gid !== g.id) return;
+                            const grp = rasterGroups.find(x => x.id === g.id);
+                            const [moved] = grp.rasters.splice(from.idx, 1);
+                            const toIdx = grp.rasters.findIndex(x => x.id === r.id);
+                            grp.rasters.splice(toIdx, 0, moved);
+                            saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
+                        } catch(err) {}
+                    });
                     row.innerHTML = `
+                        <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                         <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
                         <span onclick="toggleRaster('${g.id}','${r.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${r.name}</span>
+                        <span onclick="renameRaster('${g.id}','${r.id}','${r.name}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Renomear">✏️</span>
                         <span onclick="deleteRasterFromGroup('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Excluir raster">🗑️</span>
                     `;
                     gdiv.appendChild(row);
                 });
                 list.appendChild(gdiv);
+            });
+        }
+
+        function renameRaster(gid, rid, oldName) {
+            const name = prompt('Novo nome:', oldName);
+            if (!name || name === oldName) return;
+            const grp = rasterGroups.find(g => g.id === gid);
+            if (grp) { const r = grp.rasters.find(x => x.id === rid); if (r) r.name = name; }
+            saveRasterGroups(); renderRasterMenu();
+        }
+
+        function refreshRasterZOrder() {
+            rasterGroups.slice().reverse().forEach(g => {
+                g.rasters.slice().reverse().forEach(r => {
+                    if (customRasters[r.id] && rasterVisibility[r.id] !== false && rasterGroupVisibility[g.id] !== false) {
+                        customRasters[r.id].bringToFront();
+                    }
+                });
             });
         }
 
@@ -739,18 +800,38 @@
         function renderVectorMenu() {
             const list = document.getElementById('vector-groups-list');
             list.innerHTML = '';
-            vectorGroups.forEach(g => {
+            vectorGroups.forEach((g, gi) => {
                         const gdiv = document.createElement('div');
                         gdiv.style.cssText = 'border-bottom:1px solid rgba(128,128,128,0.15)';
+                        gdiv.draggable = true;
+                        gdiv.addEventListener('dragstart', e => {
+                            e.dataTransfer.setData('text/plain', JSON.stringify({type:'vector-group', gid:g.id, idx:gi}));
+                            gdiv.style.opacity = '0.4';
+                        });
+                        gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
+                        gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid #999'; });
+                        gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
+                        gdiv.addEventListener('drop', e => {
+                            e.preventDefault(); gdiv.style.borderTop = '';
+                            try {
+                                const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                if (from.type !== 'vector-group') return;
+                                const [moved] = vectorGroups.splice(from.idx, 1);
+                                const toIdx = vectorGroups.findIndex(x => x.id === g.id);
+                                vectorGroups.splice(toIdx, 0, moved);
+                                saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
+                            } catch(err) {}
+                        });
                         // Group header
                         const header = document.createElement('div');
                         header.className = 'basemap-row';
                         header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
-                        const allVis = g.vectors.length > 0 && g.vectors.every(v => isVectorVisible(g.id, v.id));
                         const groupVis = vectorGroupVisibility[g.id] !== false;
                         header.innerHTML = `
+                            <span style="cursor:grab;font-size:0.65em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                             <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
-                            <span onclick="renameVectorGroup('${g.id}','${g.name}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
+                            <span style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
+                            <span onclick="renameVectorGroup('${g.id}','${g.name}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Renomear">✏️</span>
                             <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
                             <span onclick="deleteVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.75em;flex-shrink:0" title="Excluir grupo">🗑️</span>
                         `;
@@ -793,26 +874,34 @@
                             if (vtype === 'point') {
                                 const m = v.marker || '●';
                                 const ms = v.markerSize || 16;
-                                legendHtml = `<span style="font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
                             } else if (vtype === 'line') {
-                                legendHtml = `<span style="display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
                             } else {
                                 const sc = v.strokeColor || '#333333';
                                 const w = Math.min(v.weight||2, 3);
-                                legendHtml = `<span style="display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
                             }
                             row.innerHTML = `
                                 <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                                 <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
                                 <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                                 <span onclick="toggleVector('${g.id}','${v.id}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
-                                <span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.75em;flex-shrink:0" title="Editar aparência">✏️</span>
+                                <span onclick="renameVector('${g.id}','${v.id}','${v.name}')" style="cursor:pointer;font-size:0.7em;flex-shrink:0" title="Renomear">✏️</span>
                                 <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
                             `;
                             gdiv.appendChild(row);
                         });
                         list.appendChild(gdiv);
             });
+        }
+
+        function renameVector(gid, vid, oldName) {
+            const name = prompt('Novo nome:', oldName);
+            if (!name || name === oldName) return;
+            const grp = vectorGroups.find(g => g.id === gid);
+            if (grp) { const v = grp.vectors.find(x => x.id === vid); if (v) v.name = name; }
+            saveVectorGroups(); renderVectorMenu();
         }
 
         function createVectorGroup() {
