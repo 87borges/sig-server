@@ -387,16 +387,27 @@
                     rasterMetas = metas;
                     const list = document.getElementById('raster-list');
                     list.innerHTML = '';
+                    // Toggle todos
+                    const allRow = document.createElement('div');
+                    allRow.className = 'basemap-row';
+                    allRow.style.display = 'flex';
+                    allRow.style.alignItems = 'center';
+                    allRow.style.gap = '6px';
+                    allRow.style.borderBottom = '1px solid rgba(128,128,128,0.2)';
+                    allRow.style.marginBottom = '2px';
+                    const allVisible = metas.length > 0 && metas.every(m => customRasters[m.id]);
+                    allRow.innerHTML = `<span onclick="toggleAllRasters(${!allVisible})" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '👁️‍🗨️'}</span><span onclick="toggleAllRasters(${!allVisible})" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
+                    list.appendChild(allRow);
                     metas.forEach(m => {
                         const row = document.createElement('div');
                         row.className = 'basemap-row';
                         row.style.display = 'flex';
                         row.style.alignItems = 'center';
                         row.style.gap = '6px';
-                        const checked = customRasters[m.id] ? 'checked' : '';
+                        const visible = !!customRasters[m.id];
                         row.innerHTML = `
-                            <input type="checkbox" id="ck_${m.id}" ${checked} onchange="toggleRaster('${m.id}', this.checked)" style="accent-color:inherit;flex-shrink:0">
-                            <label for="ck_${m.id}" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</label>
+                            <span id="eye_${m.id}" onclick="toggleRaster('${m.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="${visible ? 'Ocultar' : 'Mostrar'}">${visible ? '👁️' : '👁️‍🗨️'}</span>
+                            <span onclick="toggleRaster('${m.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</span>
                             <span onclick="deleteRaster('${m.id}')" style="cursor:pointer;opacity:0.5;font-size:0.78em;flex-shrink:0;padding:2px 4px" title="Excluir raster">🗑️</span>
                         `;
                         list.appendChild(row);
@@ -404,7 +415,12 @@
                 });
         }
 
+        function toggleAllRasters(show) {
+            rasterMetas.forEach(m => toggleRaster(m.id, show));
+        }
+
         function toggleRaster(rid, show) {
+            if (show === undefined) show = !customRasters[rid]; // toggle
             const meta = rasterMetas.find(m => m.id === rid);
             if (!meta || !meta.bounds) return;
             if (show) {
@@ -420,6 +436,16 @@
                     map.removeLayer(customRasters[rid]);
                 }
             }
+            // Atualizar ícone do olho
+            const eye = document.getElementById('eye_' + rid);
+            if (eye) {
+                eye.textContent = show ? '👁️' : '👁️‍🗨️';
+                eye.title = show ? 'Ocultar' : 'Mostrar';
+            }
+            // Atualizar ícone "Todos"
+            const allVisible = rasterMetas.length > 0 && rasterMetas.every(m => customRasters[m.id]);
+            const allEye = document.querySelector('#raster-list .basemap-row:first-child span:first-child');
+            if (allEye) allEye.textContent = allVisible ? '👁️' : '👁️‍🗨️';
         }
 
         function deleteRaster(rid) {
