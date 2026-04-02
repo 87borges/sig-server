@@ -176,7 +176,7 @@
     <script>
         let projetos = JSON.parse(localStorage.getItem('sig_projects') || '{}');
         let projetoAtual = null;
-        let map, baseLayer, overlays = {};
+        let map, baseLayer = null, overlays = {}, baseLayerType = 'google_sat';
 
         // ===== MAPA =====
         function initMap() {
@@ -185,9 +185,6 @@
                 attribution: '© Google', maxZoom: 20
             }).addTo(map);
         }
-
-        let baseLayer = null;
-        let baseLayerType = 'google_sat';
 
         function toggleBase(tipo, btn) {
             // Desmarcar todos os botões
