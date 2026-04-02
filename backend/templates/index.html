@@ -562,7 +562,7 @@
             const gid = rasterUploadGroupId;
             showRasterOverlay();
             const total = files.length;
-            let success = 0, failed = 0;
+            let success = 0, failed = 0, lastError = '';
             for (let i = 0; i < total; i++) {
                 const file = files[i];
                 const fd = new FormData();
@@ -580,9 +580,9 @@
                         xhr.onload = () => {
                             if (xhr.status >= 200 && xhr.status < 300) {
                                 try { resolve(JSON.parse(xhr.responseText)); }
-                                catch(e) { reject(new Error('Resposta inválida do servidor')); }
+                                catch(e) { reject(new Error('Resposta inválida: ' + xhr.responseText.substring(0, 200))); }
                             } else {
-                                reject(new Error(`HTTP ${xhr.status}`));
+                                reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText.substring(0, 200)}`));
                             }
                         };
                         xhr.onerror = () => reject(new Error('Erro de rede'));
@@ -609,6 +609,7 @@
                 } catch (e) {
                     if (e.message === 'Cancelado') { hideRasterOverlay(); return; }
                     console.error('Raster upload error:', e.message);
+                    lastError = e.message;
                     failed++;
                 }
             }
@@ -617,10 +618,8 @@
             renderRasterMenu();
             if (failed === 0) {
                 showRasterFeedback('✅', `${success} raster(s) carregado(s)`, '#22c55e');
-            } else if (success > 0) {
-                showRasterFeedback('⚠️', `${success} ok, ${failed} falhou`, '#f59e0b');
             } else {
-                showRasterFeedback('❌', `Falha ao carregar (${total - success}/${total})`, '#ef4444');
+                showRasterFeedback('❌', `Falha: ${lastError || 'desconhecido'}`, '#ef4444');
             }
             document.getElementById('raster-upload-input').value = '';
         }
