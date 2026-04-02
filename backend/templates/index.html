@@ -265,6 +265,7 @@
 
         // ===== RASTER UPLOAD =====
         let customRasters = {};
+        let rasterVisibility = {};  // id -> boolean
         let rasterMetas = [];
         let rasterAbortController = null;
         let rasterOverlay = null;
@@ -395,7 +396,7 @@
                     allRow.style.gap = '6px';
                     allRow.style.borderBottom = '1px solid rgba(128,128,128,0.2)';
                     allRow.style.marginBottom = '2px';
-                    const allVisible = metas.length > 0 && metas.every(m => customRasters[m.id]);
+                    const allVisible = metas.length > 0 && metas.every(m => rasterVisibility[m.id]);
                     allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
                     list.appendChild(allRow);
                     metas.forEach(m => {
@@ -404,7 +405,7 @@
                         row.style.display = 'flex';
                         row.style.alignItems = 'center';
                         row.style.gap = '6px';
-                        const visible = !!customRasters[m.id];
+                        const visible = !!rasterVisibility[m.id];
                         row.innerHTML = `
                             <span id="eye_${m.id}" onclick="toggleRaster('${m.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="${visible ? 'Ocultar' : 'Mostrar'}">${visible ? '👁️' : '🙈'}</span>
                             <span onclick="toggleRaster('${m.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</span>
@@ -416,14 +417,15 @@
         }
 
         function toggleAllRasters() {
-            const allVis = rasterMetas.length > 0 && rasterMetas.every(m => customRasters[m.id]);
+            const allVis = rasterMetas.length > 0 && rasterMetas.every(m => rasterVisibility[m.id]);
             rasterMetas.forEach(m => toggleRaster(m.id, !allVis));
         }
 
         function toggleRaster(rid, show) {
-            if (show === undefined) show = !customRasters[rid]; // toggle
+            if (show === undefined) show = !rasterVisibility[rid];
             const meta = rasterMetas.find(m => m.id === rid);
             if (!meta || !meta.bounds) return;
+            rasterVisibility[rid] = show;
             if (show) {
                 if (!customRasters[rid]) {
                     customRasters[rid] = L.imageOverlay(`/api/raster/${projetoAtual}/${rid}`, meta.bounds, {
@@ -446,7 +448,7 @@
             // Atualizar ícone "Todos"
             const allEye = document.getElementById('eye_all');
             if (allEye) {
-                const allVis = rasterMetas.length > 0 && rasterMetas.every(m => customRasters[m.id]);
+                const allVis = rasterMetas.length > 0 && rasterMetas.every(m => rasterVisibility[m.id]);
                 allEye.textContent = allVis ? '👁️' : '🙈';
             }
         }
