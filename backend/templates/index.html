@@ -155,12 +155,11 @@
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
                     </div>
                     <!-- Wayback Timeline -->
-                    <div id="wayback-timeline" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,0.85),rgba(0,0,0,0.75));padding:10px 20px">
+                    <div id="wayback-timeline" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:1000;background:linear-gradient(0deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
                         <div style="display:flex;align-items:center;gap:15px;color:white">
-                            <span style="font-size:0.8em;opacity:0.7;white-space:nowrap">📅 Imagem Histórica</span>
-                            <input type="range" id="wayback-slider" min="0" max="0" value="0" oninput="aplicarWaybackSlider(this.value)" style="flex:1;accent-color:#fff;cursor:pointer">
-                            <span id="wayback-date" style="font-size:0.85em;font-weight:600;min-width:130px;text-align:right">—</span>
-                            <span onclick="fecharWayback()" style="cursor:pointer;font-size:1.1em;padding:4px 8px;opacity:0.7" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">✕</span>
+                            <span style="font-size:0.8em;opacity:0.7;white-space:nowrap">📅</span>
+                            <input type="range" id="wayback-slider" min="0" max="0" value="0" style="flex:1;accent-color:#fff;cursor:pointer">
+                            <span id="wayback-date" style="font-size:0.85em;font-weight:600;min-width:110px;text-align:right">—</span>
                         </div>
                     </div>
                 </div>
@@ -210,12 +209,11 @@
             try {
                 const r = await fetch('https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer?f=pjson');
                 const data = await r.json();
-                waybackItems = data.Selection || [];
-                // Items come newest first — reverse so slider goes old→new (left→right)
-                waybackItems.reverse();
+                waybackItems = (data.Selection || []).slice().reverse();
                 const slider = document.getElementById('wayback-slider');
                 slider.max = waybackItems.length - 1;
-                slider.value = waybackItems.length - 1; // start at newest
+                slider.value = waybackItems.length - 1;
+                slider.oninput = function() { aplicarWaybackSlider(this.value); };
                 aplicarWaybackSlider(waybackItems.length - 1);
             } catch(e) { console.error(e); document.getElementById('wayback-date').textContent = 'Erro'; }
         }
@@ -225,22 +223,15 @@
             const item = waybackItems[idx];
             if (!item) return;
             document.getElementById('wayback-date').textContent = item.Name.replace('World Imagery (Wayback ', '').replace(')', '');
-            // Debounce tile loading
-            clearTimeout(waybackTimeout);
-            waybackTimeout = setTimeout(() => {
-                if (waybackLayer) map.removeLayer(waybackLayer);
-                waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
-                    attribution: '© Esri Wayback', maxZoom: 19
-                });
-                // Insert wayback layer below all overlays
-                waybackLayer.addTo(map);
-                // Move wayback below overlays
-                waybackLayer.bringToBack();
-            }, 150);
+            // Remove previous wayback layer
+            if (waybackLayer) map.removeLayer(waybackLayer);
+            waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
+                attribution: '© Esri Wayback', maxZoom: 19
+            });
+            waybackLayer.addTo(map);
         }
 
         function fecharWayback() {
-            document.getElementById('wayback-timeline').style.display = 'none';
             if (waybackLayer) { map.removeLayer(waybackLayer); waybackLayer = null; }
         }
 
