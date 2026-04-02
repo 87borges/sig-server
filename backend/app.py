@@ -336,36 +336,51 @@ def upload_vector(project, gid):
     files = request.files.getlist('file')
     if not files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
-    vid = str(uuid.uuid4())[:8]
-    vector_name = ''
-    main_type = ''
-    # Determine name from first recognized file
+    # Group files by base name (shapefile sets)
+    file_groups = {}
+    standalone = []
     for f in files:
         ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-        if ext in ('shp', 'kml', 'kmz', 'gpkg', 'zip'):
-            vector_name = f.filename.rsplit('.', 1)[0]
-            main_type = ext
-            break
-    if not vector_name:
-        vector_name = files[0].filename.rsplit('.', 1)[0]
-    # Save all files
-    for f in files:
-        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-        fname = f'{vid}_{secure_filename(f.filename)}'
-        f.save(os.path.join(VECTOR_DIR, fname))
-    # Update metadata
+        if ext in ('shp', 'shx', 'dbf', 'prj', 'cpg', 'sbx', 'sbn', 'prj'):
+            base = f.filename.rsplit('.', 1)[0]
+            file_groups.setdefault(base, []).append(f)
+        elif ext in ('kml', 'kmz', 'gpkg', 'zip'):
+            standalone.append(f)
+        else:
+            standalone.append(f)
+    # Process each shapefile group as one vector
+    results = []
     meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
     groups = []
     if os.path.isfile(meta_path):
         with open(meta_path) as mf:
             groups = json.load(mf)
-    for g in groups:
-        if g['id'] == gid:
-            g.setdefault('vectors', []).append({'id': vid, 'name': vector_name, 'type': main_type})
-            break
+    for base, fgroup in file_groups.items():
+        vid = str(uuid.uuid4())[:8]
+        for f in fgroup:
+            fname = f'{vid}_{secure_filename(f.filename)}'
+            f.save(os.path.join(VECTOR_DIR, fname))
+        for g in groups:
+            if g['id'] == gid:
+                g.setdefault('vectors', []).append({'id': vid, 'name': base, 'type': 'shp'})
+                break
+        results.append({'id': vid, 'name': base, 'type': 'shp'})
+    for f in standalone:
+        vid = str(uuid.uuid4())[:8]
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        name = f.filename.rsplit('.', 1)[0]
+        if ext == 'zip':
+            name = name.rsplit('.', 1)[0] if '.' in name else name
+        fname = f'{vid}_{secure_filename(f.filename)}'
+        f.save(os.path.join(VECTOR_DIR, fname))
+        for g in groups:
+            if g['id'] == gid:
+                g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': ext})
+                break
+        results.append({'id': vid, 'name': name, 'type': ext})
     with open(meta_path, 'w') as mf:
         json.dump(groups, mf)
-    return jsonify({'success': True, 'id': vid, 'name': vector_name, 'type': main_type})
+    return jsonify({'success': True, 'vectors': results})
 
 @app.route('/api/vector/<project>/groups/<gid>/vector/<vid>', methods=['DELETE'])
 def delete_vector(project, gid, vid):
