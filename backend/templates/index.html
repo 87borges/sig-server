@@ -812,6 +812,9 @@
         let veEditGid = null, veEditVid = null, veEditBackup = null;
 
         function detectVectorType(gid, vid) {
+            const group = vectorGroups.find(g => g.id === gid);
+            const vec = group?.vectors.find(v => v.id === vid);
+            if (vec?._detectedType) return vec._detectedType;
             if (!vectorLayers[vid]) return 'polygon';
             const layer = vectorLayers[vid];
             const layers = layer.getLayers();
