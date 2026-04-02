@@ -499,7 +499,7 @@
                         row.style.display = 'flex';
                         row.style.alignItems = 'center';
                         row.style.gap = '6px';
-                        const visible = !!rasterVisibility[m.id];
+                        const visible = rasterVisibility[m.id] !== false;
                         row.innerHTML = `
                             <span id="eye_${m.id}" onclick="toggleRaster('${m.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="${visible ? 'Ocultar' : 'Mostrar'}">${visible ? '👁️' : '🙈'}</span>
                             <span onclick="toggleRaster('${m.id}')" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</span>
@@ -584,9 +584,10 @@
                     const undetected = [];
                     groups.forEach(g => g.vectors.forEach(v => { if (!v._detectedType) undetected.push(v); }));
                     if (undetected.length > 0) {
-                        Promise.all(undetected.map(v => fetch(`/api/vector/${projetoAtual}/detect-type/${v.id}`).then(r=>r.json()).then(d=>{v._detectedType=d.type;}))).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
+                        Promise.all(undetected.map(v => fetch(`/api/vector/${projetoAtual}/detect-type/${v.id}`).then(r=>r.json()).then(d=>{v._detectedType=d.type;}))).then(()=>{ renderVectorMenu(); saveVectorGroups(); autoShowVectors(); });
                     } else {
                         renderVectorMenu();
+                        autoShowVectors();
                     }
                 });
         }
@@ -640,7 +641,7 @@
                                     renderVectorMenu();
                                 } catch(err) {}
                             });
-                            const vis = !!vectorVisibility[v.id];
+                            const vis = vectorVisibility[v.id] !== false;
                             const color = v.color || '#e74c3c';
                             const vtype = v._detectedType || 'polygon';
                             let legendHtml = '';
@@ -1009,6 +1010,17 @@
             loadVectorGroups();
         }
 
+        function autoShowVectors() {
+            vectorGroups.forEach(g => {
+                g.vectors.forEach(v => {
+                    if (vectorVisibility[v.id] !== false && !vectorLayers[v.id]) {
+                        vectorVisibility[v.id] = true;
+                        toggleVector(g.id, v.id);
+                    }
+                });
+            });
+        }
+
         function refreshVectorZOrder() {
             // Add layers in reverse order so first in list = top of map
             vectorGroups.forEach(g => {
@@ -1038,6 +1050,15 @@
         function checkCustomRaster() {
             if (!projetoAtual) return;
             loadRasterList();
+            autoShowRasters();
+        }
+
+        function autoShowRasters() {
+            rasterMetas.forEach(m => {
+                if (rasterVisibility[m.id] !== false) {
+                    toggleRaster(m.id, true);
+                }
+            });
         }
 
         // ===== PROJETOS =====
