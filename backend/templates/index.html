@@ -44,6 +44,7 @@
         /* Views */
         .view { display: none; height: 100%; }
         .view.active { display: flex; }
+        #view-mapa.active { display: block; position: relative; }
 
         /* Projetos */
         #view-projetos { flex-direction: column; padding: 20px; overflow-y: auto; }
@@ -58,7 +59,7 @@
         .leaflet-control-layers { font-size: 0.85em; }
 
         /* Painel lateral do mapa */
-        .map-panel { width: 300px; background: rgba(255,255,255,0.82); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); height: 100%; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); z-index: 40; }
+        .map-panel { width: 300px; background: rgba(255,255,255,0.75); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); height: 100%; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); z-index: 40; position: absolute; left: 0; top: 0; }
         .map-panel-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; }
         .layer-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
         .layer-item:hover { background: #f9f9f9; }
@@ -141,7 +142,7 @@
                     </div>
                     <div id="layers-list"></div>
                 </div>
-                <div style="flex:1;position:relative"><div id="map"></div>
+                <div style="flex:1;position:relative;width:100%;height:100%"><div id="map" style="width:100%;height:100%;position:absolute;inset:0"></div>
                     <!-- Basemap selector flutuante -->
                     <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
                     <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:rgba(255,255,255,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:180px;max-height:70vh;overflow-y:auto;font-size:0.8em">
