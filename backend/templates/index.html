@@ -253,20 +253,20 @@
 
         function uploadRaster(files) {
             if (!files.length || !projetoAtual) return;
-            alert('Enviando raster... pode levar alguns minutos para processar.');
             const fd = new FormData();
             fd.append('file', files[0]);
             fd.append('project', projetoAtual);
             fetch('/api/upload-raster', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success && data.has_tiles) {
+                    if (data.success) {
                         rasterBounds = data.bounds;
-                        loadCustomRaster();
                         document.getElementById('raster-layer-ctrl').style.display = 'block';
-                        alert('Raster adicionado ao projeto!');
-                    } else if (data.note) {
-                        alert('Erro ao processar: ' + data.note);
+                        // Auto-show raster
+                        rasterVisible = true;
+                        loadCustomRaster();
+                        document.getElementById('raster-layer-ctrl').style.background = '#1a1a1a';
+                        document.getElementById('raster-layer-ctrl').style.color = 'white';
                     } else {
                         alert(data.error || 'Erro ao enviar');
                     }
@@ -278,13 +278,11 @@
         function loadCustomRaster() {
             if (customRaster) map.removeLayer(customRaster);
             if (!projetoAtual) return;
-            customRaster = L.tileLayer(`/api/raster-tiles/${projetoAtual}/{z}/{x}/{y}.png`, {
-                tms: true, maxZoom: 19, opacity: 0.8
-            });
-            if (rasterBounds) {
-                map.fitBounds(rasterBounds);
-            }
-            if (rasterVisible) customRaster.addTo(map);
+            const bounds = rasterBounds || [[-23, -47], [-22, -46]];
+            customRaster = L.imageOverlay(`/api/raster/${projetoAtual}`, bounds, {
+                opacity: 0.85, interactive: true
+            }).addTo(map);
+            map.fitBounds(bounds, { padding: [30, 30] });
         }
 
         function toggleRaster() {
@@ -302,10 +300,8 @@
 
         function checkCustomRaster() {
             if (!projetoAtual) return;
-            fetch(`/api/raster-tiles/${projetoAtual}/10/0/0.png`).then(r => {
-                if (r.ok) {
-                    document.getElementById('raster-layer-ctrl').style.display = 'block';
-                }
+            fetch(`/api/raster/${projetoAtual}`).then(r => {
+                if (r.ok) document.getElementById('raster-layer-ctrl').style.display = 'block';
             }).catch(() => {});
         }
 
