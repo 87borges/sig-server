@@ -257,5 +257,121 @@ def delete_raster(project, rid):
             json.dump(metas, mf)
     return jsonify({'success': True})
 
+# ===== VECTOR GROUPS =====
+VECTOR_DIR = os.path.join(os.path.dirname(__file__), 'vectors')
+os.makedirs(VECTOR_DIR, exist_ok=True)
+
+@app.route('/api/vector/<project>/groups', methods=['GET'])
+def list_vector_groups(project):
+    import json
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            return jsonify(json.load(mf))
+    return jsonify([])
+
+@app.route('/api/vector/<project>/groups', methods=['POST'])
+def create_vector_group(project):
+    import json, uuid
+    data = request.get_json() or {}
+    name = data.get('name', 'Novo Grupo')
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    groups = []
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+    gid = str(uuid.uuid4())[:8]
+    groups.append({'id': gid, 'name': name, 'vectors': []})
+    with open(meta_path, 'w') as mf:
+        json.dump(groups, mf)
+    return jsonify({'success': True, 'id': gid, 'name': name})
+
+@app.route('/api/vector/<project>/groups/<gid>', methods=['PUT'])
+def rename_vector_group(project, gid):
+    import json
+    data = request.get_json() or {}
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+        for g in groups:
+            if g['id'] == gid:
+                g['name'] = data.get('name', g['name'])
+                break
+        with open(meta_path, 'w') as mf:
+            json.dump(groups, mf)
+    return jsonify({'success': True})
+
+@app.route('/api/vector/<project>/groups/<gid>', methods=['DELETE'])
+def delete_vector_group(project, gid):
+    import json, shutil
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+        for g in groups:
+            if g['id'] == gid:
+                for v in g.get('vectors', []):
+                    for old in os.listdir(VECTOR_DIR):
+                        if old.startswith(f'{v["id"]}_'):
+                            os.remove(os.path.join(VECTOR_DIR, old))
+                break
+        groups = [g for g in groups if g['id'] != gid]
+        with open(meta_path, 'w') as mf:
+            json.dump(groups, mf)
+    return jsonify({'success': True})
+
+@app.route('/api/vector/<project>/groups/<gid>/upload', methods=['POST'])
+def upload_vector(project, gid):
+    import json, uuid
+    if 'file' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo'}), 400
+    f = request.files['file']
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in ('shp', 'shx', 'dbf', 'prj', 'kml', 'kmz', 'gpkg', 'zip'):
+        return jsonify({'error': 'Tipo não permitido'}), 400
+    vid = str(uuid.uuid4())[:8]
+    fname = f'{vid}_{secure_filename(f.filename)}'
+    f.save(os.path.join(VECTOR_DIR, fname))
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    groups = []
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+    for g in groups:
+        if g['id'] == gid:
+            g.setdefault('vectors', []).append({'id': vid, 'name': f.filename.rsplit('.', 1)[0], 'filename': fname, 'type': ext})
+            break
+    with open(meta_path, 'w') as mf:
+        json.dump(groups, mf)
+    return jsonify({'success': True, 'id': vid, 'name': f.filename.rsplit('.', 1)[0], 'filename': fname, 'type': ext})
+
+@app.route('/api/vector/<project>/groups/<gid>/vector/<vid>', methods=['DELETE'])
+def delete_vector(project, gid, vid):
+    import json
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+        for g in groups:
+            if g['id'] == gid:
+                for v in g.get('vectors', []):
+                    if v['id'] == vid:
+                        for old in os.listdir(VECTOR_DIR):
+                            if old.startswith(f'{vid}_'):
+                                os.remove(os.path.join(VECTOR_DIR, old))
+                        g['vectors'] = [vv for vv in g['vectors'] if vv['id'] != vid]
+                        break
+        with open(meta_path, 'w') as mf:
+            json.dump(groups, mf)
+    return jsonify({'success': True})
+
+@app.route('/api/vector/<project>/file/<filename>', methods=['GET'])
+def get_vector_file(project, filename):
+    path = os.path.join(VECTOR_DIR, secure_filename(filename))
+    if os.path.isfile(path):
+        return send_from_directory(VECTOR_DIR, secure_filename(filename))
+    return jsonify({'error': 'Arquivo não encontrado'}), 404
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
