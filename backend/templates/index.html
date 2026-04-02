@@ -147,7 +147,7 @@
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite (atual)</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="esri_topo" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Topográfico</label></div>
-                        <div class="basemap-row" style="cursor:pointer" onclick="trocarBase('esri_wayback');document.getElementById('basemap-menu').style.display='none';document.getElementById('wayback-panel').style.display='block'"><label style="cursor:pointer">📅 Satélite Histórico</label></div>
+                        <div class="basemap-row" style="cursor:pointer" onclick="abrirWayback();document.getElementById('basemap-menu').style.display='none'"><label style="cursor:pointer">📅 Satélite Histórico (ESRI)</label></div>
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Google</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="google_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="google_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
@@ -159,10 +159,7 @@
                     <!-- Wayback panel -->
                     <div id="wayback-panel" style="display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:12px 18px;align-items:center;gap:10px">
                         <span style="font-size:0.85em;font-weight:600">📅 Imagem Histórica</span>
-                        <select id="wayback-year" onchange="carregarWayback(this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:0.85em">
-                            <option value="">Carregando...</option>
-                        </select>
-                        <select id="wayback-item" onchange="aplicarWayback()" style="padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;display:none">
+                        <select id="wayback-select" onchange="aplicarWayback()" style="padding:6px 10px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;max-width:300px">
                         </select>
                         <span onclick="document.getElementById('wayback-panel').style.display='none'" style="cursor:pointer;font-size:1.1em;padding:4px">✕</span>
                     </div>
@@ -198,43 +195,32 @@
         }
 
         // Esri Wayback Imagery
-        let waybackData = {};
-        async function carregarWayback(year) {
-            if (!waybackData[year]) {
-                try {
-                    const r = await fetch(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${year}/info?f=json`);
-                    waybackData[year] = await r.json();
-                } catch(e) { console.error('Wayback error:', e); return; }
-            }
-            const itemSel = document.getElementById('wayback-item');
-            itemSel.innerHTML = '';
-            waybackData[year].forEach((item, i) => {
-                const d = item.attributes.publishDate.split('T')[0];
-                itemSel.innerHTML += `<option value="${i}">${d} (v${item.attributes.version})</option>`;
-            });
-            itemSel.style.display = '';
-            aplicarWayback();
+        let waybackItems = [];
+        async function abrirWayback() {
+            const panel = document.getElementById('wayback-panel');
+            panel.style.display = 'flex';
+            if (waybackItems.length > 0) return;
+            document.getElementById('wayback-select').innerHTML = '<option>Carregando...</option>';
+            try {
+                const r = await fetch('https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer?f=pjson');
+                const data = await r.json();
+                waybackItems = data.Selection || [];
+                const sel = document.getElementById('wayback-select');
+                sel.innerHTML = '';
+                waybackItems.forEach((item, i) => {
+                    sel.innerHTML += `<option value="${i}">${item.Name}</option>`;
+                });
+            } catch(e) { console.error(e); document.getElementById('wayback-select').innerHTML = '<option>Erro ao carregar</option>'; }
         }
 
         function aplicarWayback() {
-            const year = document.getElementById('wayback-year').value;
-            const idx = document.getElementById('wayback-item').value;
-            if (!year || !waybackData[year] || !waybackData[year][idx]) return;
+            const idx = document.getElementById('wayback-select').value;
+            if (!waybackItems[idx]) return;
             map.removeLayer(baseLayer);
-            baseLayer = L.tileLayer(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${year}/{z}/{y}/{x}`, {
+            baseLayer = L.tileLayer(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${waybackItems[idx].ID}/{z}/{y}/{x}`, {
                 attribution: '© Esri Wayback', maxZoom: 19
             }).addTo(map);
         }
-
-        // Load Wayback years on init
-        fetch('https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer?f=pjson')
-            .then(r => r.json())
-            .then(data => {
-                const years = Object.keys(data.tileInfo.lods || {}).map(Number);
-                const sel = document.getElementById('wayback-year');
-                sel.innerHTML = '';
-                years.reverse().forEach(y => { sel.innerHTML += `<option value="${y}">${y}</option>`; });
-            });
 
         // ===== PROJETOS =====
         function salvarProjetos() { localStorage.setItem('sig_projects', JSON.stringify(projetos)); }
