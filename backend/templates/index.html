@@ -90,6 +90,7 @@
         @media (max-width: 768px) {
             .map-panel { width: 220px; }
         }
+        .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
     </style>
 </head>
 <body>
@@ -177,9 +178,8 @@
                             <input type="file" id="vector-upload-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadVectors(this.files)">
                         </div>
                     </div>
-                    <!-- Floating toggle buttons -->
-                    <div id="basemap-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
-                    <div id="vector-btn" onclick="openSidePanel('vectors')" style="position:absolute;top:50px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">📐</div>
+                    <!-- Floating toggle button -->
+                    <div id="menu-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">⚙️</div>
                     <!-- Hidden old menus (kept for compatibility) -->
                     <div id="basemap-menu" style="display:none"></div>
                     <div id="vector-menu" style="display:none"></div>
@@ -283,15 +283,13 @@
         function openSidePanel(tab) {
             const panel = document.getElementById('side-panel');
             panel.style.display = 'flex';
-            document.getElementById('basemap-btn').style.display = 'none';
-            document.getElementById('vector-btn').style.display = 'none';
+            document.getElementById('menu-btn').style.display = 'none';
             switchPanelTab(tab);
         }
 
         function closeSidePanel() {
             document.getElementById('side-panel').style.display = 'none';
-            document.getElementById('basemap-btn').style.display = '';
-            document.getElementById('vector-btn').style.display = '';
+            document.getElementById('menu-btn').style.display = '';
             currentPanelTab = null;
         }
 
