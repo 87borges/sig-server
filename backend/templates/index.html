@@ -75,10 +75,10 @@
         .upload-area p { font-size: 0.85em; color: #888; }
 
         /* Basemap selector */
-        .basemap-row { padding: 10px 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; }
+        .basemap-row { padding:5px 12px; border-bottom:none; display:flex; align-items:center; gap:6px; }
         .basemap-row label { font-size: 0.85em; cursor: pointer; }
         .basemap-row input { cursor: pointer; }
-        .bm-btn { padding:5px 10px;border-radius:5px;cursor:pointer;transition:background 0.2s;flex:1;user-select:none;font-size:0.85em }
+        .bm-btn { padding:4px 8px;border-radius:4px;cursor:pointer;transition:background 0.2s;flex:1;user-select:none;font-size:0.78em }
         .bm-btn:hover { background:#e8e8e8; }
         .bm-btn.bm-active { background:#1a1a1a;color:white; }
 
@@ -144,21 +144,21 @@
                 <div style="flex:1;position:relative"><div id="map"></div>
                     <!-- Basemap selector flutuante -->
                     <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
-                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:200px">
-                        <div style="padding:6px 15px;font-size:0.7em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:1px">Raster Base</div>
+                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:6px 0;min-width:180px;max-height:70vh;overflow-y:auto;font-size:0.8em">
+                        <div style="padding:4px 12px;font-size:0.6em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Raster Base</div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('osm',this)">OpenStreetMap</div></div>
-                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
+                        <div style="padding:3px 12px;font-size:0.58em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_sat',this)">Satélite</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_topo',this)">Topográfico</div></div>
-                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">GOOGLE</div>
+                        <div style="padding:3px 12px;font-size:0.58em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">GOOGLE</div>
                         <div class="basemap-row"><div class="bm-btn bm-active" onclick="toggleBase('google_sat',this)">Satélite</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_hyb',this)">Híbrido</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_ter',this)">Terreno</div></div>
-                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Bing</div>
+                        <div style="padding:3px 12px;font-size:0.58em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Bing</div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_sat',this)">Satélite</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_hyb',this)">Híbrido</div></div>
                         <div style="border-top:1px solid #eee;margin:6px 15px"></div>
-                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Personalizados</div>
+                        <div style="padding:3px 12px;font-size:0.58em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
                         <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;color:#1a1a1a;font-weight:600"><label style="cursor:pointer">➕ Adicionar raster (.tif)</label></div>
                         <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
