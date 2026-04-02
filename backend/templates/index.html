@@ -144,8 +144,8 @@
                 </div>
                 <div style="flex:1;position:relative;width:100%;height:100%"><div id="map" style="width:100%;height:100%;position:absolute;inset:0"></div>
                     <!-- Basemap selector flutuante -->
-                    <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
-                    <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);color:white;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:180px;max-height:70vh;overflow-y:auto;font-size:0.8em">
+                    <div id="basemap-btn" onmouseenter="openBasemapMenu()" onmouseleave="closeBasemapMenu()" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
+                    <div id="basemap-menu" onmouseenter="clearTimeout(basemapTimeout)" onmouseleave="closeBasemapMenu()" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);color:white;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:180px;max-height:70vh;overflow-y:auto;font-size:0.8em">
                         <div style="padding:4px 12px;font-size:0.6em;color:inherit;font-weight:600;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px">Raster Base</div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('osm',this)">OpenStreetMap</div></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">ESRI</div>
@@ -158,7 +158,7 @@
                         <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
-                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Adicionar (.tif)</label></div>
+                        <div class="basemap-row" onclick="document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Adicionar (.tif)</label></div>
                         <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
                     </div>
                     <!-- Wayback Timeline -->
@@ -182,6 +182,19 @@
             baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: '© Google', maxZoom: 20
             }).addTo(map);
+        }
+
+        let basemapTimeout = null;
+
+        function openBasemapMenu() {
+            clearTimeout(basemapTimeout);
+            document.getElementById('basemap-menu').style.display = 'block';
+        }
+
+        function closeBasemapMenu() {
+            basemapTimeout = setTimeout(() => {
+                document.getElementById('basemap-menu').style.display = 'none';
+            }, 400);
         }
 
         function toggleBase(tipo, btn) {
