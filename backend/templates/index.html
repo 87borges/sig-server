@@ -669,9 +669,22 @@
         }
 
         function loadRasterList() {
-            // Legacy compatibility — redirect to groups
             if (!projetoAtual) return;
             loadRasterGroups();
+            autoShowRasters();
+        }
+
+        function autoShowRasters() {
+            rasterGroups.forEach(g => {
+                if (rasterGroupVisibility[g.id] !== false) {
+                    g.rasters.forEach(r => {
+                        if (rasterVisibility[r.id] !== false && !customRasters[r.id] && r.bounds) {
+                            customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, r.bounds, { opacity: 0.85, interactive: true });
+                            customRasters[r.id].addTo(map);
+                        }
+                    });
+                }
+            });
         }
 
         function toggleAllRastersLegacy() {}
@@ -849,8 +862,21 @@
             for (let i = 0; i < files.length; i++) {
                 fd.append('file', files[i]);
             }
-            await fetch(`/api/vector/${projetoAtual}/groups/${gid}/upload`, { method: 'POST', body: fd });
-            loadVectorGroups();
+            const resp = await fetch(`/api/vector/${projetoAtual}/groups/${gid}/upload`, { method: 'POST', body: fd });
+            const result = await resp.json();
+            // Load groups to get updated list
+            const groupsResp = await fetch(`/api/vector/${projetoAtual}/groups`);
+            vectorGroups = await groupsResp.json();
+            renderVectorMenu();
+            // Auto-show new vectors
+            if (result.vectors) {
+                for (const v of result.vectors) {
+                    vectorGroupVisibility[gid] = true;
+                    if (!vectorLayers[v.id]) {
+                        await toggleVector(gid, v.id, true);
+                    }
+                }
+            }
             document.getElementById('vector-upload-input').value = '';
         }
 
@@ -858,8 +884,8 @@
             return vectorGroupVisibility[gid] !== false && vectorVisibility[vid] !== false;
         }
 
-        async function toggleVector(gid, vid) {
-            const wasVisible = isVectorVisible(gid, vid);
+        async function toggleVector(gid, vid, forceShow) {
+            const wasVisible = forceShow ? false : isVectorVisible(gid, vid);
             if (wasVisible) {
                 vectorVisibility[vid] = false;
                 if (vectorLayers[vid]) map.removeLayer(vectorLayers[vid]);
@@ -1148,7 +1174,6 @@
         }
 
         function refreshVectorZOrder() {
-            // Add layers in reverse order so first in list = top of map
             vectorGroups.forEach(g => {
                 g.vectors.slice().reverse().forEach(v => {
                     if (vectorLayers[v.id] && vectorVisibility[v.id]) {
@@ -1156,6 +1181,18 @@
                     }
                 });
             });
+        }
+
+        async function autoShowExistingVectors() {
+            for (const g of vectorGroups) {
+                if (vectorGroupVisibility[g.id] === false) continue;
+                for (const v of g.vectors) {
+                    if (vectorVisibility[v.id] === false) continue;
+                    if (!vectorLayers[v.id]) {
+                        await toggleVector(g.id, v.id, true);
+                    }
+                }
+            }
         }
 
         async function saveVectorGroups() {
@@ -1232,6 +1269,7 @@
             carregarCamadas();
             checkCustomRaster();
             loadVectorGroups();
+            autoShowExistingVectors();
         }
 
         function verProjetos(btn) {
