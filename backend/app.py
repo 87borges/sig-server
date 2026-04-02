@@ -433,7 +433,7 @@ def get_vector_geojson(project, vid):
                 if ext in ('shp', 'gpkg', 'kml'):
                     main_file = os.path.join(tmpdir, f)
                     break
-        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '/vsistdout/', main_file],
+        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file],
                           capture_output=True, text=True, timeout=60)
         print(f'ogr2ogr for {vid}: returncode={r.returncode}, stdout_len={len(r.stdout)}, stderr={r.stderr[:200]}')
         if r.returncode == 0 and r.stdout:
