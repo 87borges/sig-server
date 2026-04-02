@@ -158,7 +158,7 @@
                         <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
-                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">Adicionar (.tif)</label></div>
+                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Adicionar (.tif)</label></div>
                         <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
                     </div>
                     <!-- Wayback Timeline -->
@@ -389,6 +389,7 @@
                     const list = document.getElementById('raster-list');
                     list.innerHTML = '';
                     // Toggle todos
+                    if (metas.length > 0) {
                     const allRow = document.createElement('div');
                     allRow.className = 'basemap-row';
                     allRow.style.display = 'flex';
@@ -399,6 +400,7 @@
                     const allVisible = metas.length > 0 && metas.every(m => rasterVisibility[m.id]);
                     allRow.innerHTML = `<span id="eye_all" onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none" title="Todos">${allVisible ? '👁️' : '🙈'}</span><span onclick="toggleAllRasters()" style="cursor:pointer;font-size:0.72em;color:inherit;opacity:0.7;user-select:none">Todos</span>`;
                     list.appendChild(allRow);
+                    }
                     metas.forEach(m => {
                         const row = document.createElement('div');
                         row.className = 'basemap-row';
