@@ -144,10 +144,9 @@
                     <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:200px">
                         <div style="padding:6px 15px;font-size:0.7em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:1px">Mapas Base</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="osm" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>OpenStreetMap</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="google_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'" checked><label>Satélite</label></div>
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
-                        <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'" checked><label>Satélite</label></div>
-                        <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Google</div>
-                        <div class="basemap-row"><input type="radio" name="basemap" value="google_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="google_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="google_ter" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Terreno</label></div>
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Bing</div>
@@ -155,7 +154,7 @@
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
                     </div>
                     <!-- Wayback Timeline -->
-                    <div id="wayback-timeline" style="display:none;position:absolute;bottom:0;left:0;right:0;z-index:1000;background:linear-gradient(0deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
+                    <div id="wayback-timeline" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
                         <div style="display:flex;align-items:center;gap:15px;color:white">
                             <span style="font-size:0.8em;opacity:0.7;white-space:nowrap">📅</span>
                             <input type="range" id="wayback-slider" min="0" max="0" value="0" oninput="aplicarWaybackSlider(this.value)" style="flex:1;accent-color:#fff;cursor:pointer">
@@ -172,8 +171,8 @@
         // ===== MAPA =====
         function initMap() {
             map = L.map('map', { zoomControl: true }).setView([-15.78, -47.93], 10);
-            baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap', maxZoom: 19
+            baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: '© Google', maxZoom: 20
             }).addTo(map);
         }
 
@@ -227,7 +226,7 @@
                 if (waybackLayer) map.removeLayer(waybackLayer);
                 waybackLayer = L.tileLayer(`/api/wayback-tile/${item.ID}/${item.M}/{z}/{y}/{x}`, {
                     attribution: '© Esri Wayback', maxZoom: 19,
-                    maxNativeZoom: 14, keepBuffer: 1, updateWhenIdle: true
+                    keepBuffer: 1, updateWhenIdle: true
                 });
                 waybackLayer.addTo(map);
                 waybackLayer.bringToFront();
