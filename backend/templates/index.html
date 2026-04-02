@@ -610,7 +610,7 @@
                         `;
                         gdiv.appendChild(header);
                         // Vectors
-                        g.vectors.forEach(v => {
+                        g.vectors.forEach((v, vi) => {
                             const row = document.createElement('div');
                             row.className = 'basemap-row';
                             row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
