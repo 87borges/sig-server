@@ -622,7 +622,7 @@
                                 row.style.opacity = '0.4';
                             });
                             row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-                            row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid #333'; });
+                            row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid #999'; });
                             row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
                             row.addEventListener('drop', e => {
                                 e.preventDefault();
