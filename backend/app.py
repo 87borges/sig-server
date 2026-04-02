@@ -14,6 +14,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # In-memory tile cache (max 5000 tiles)
 _tile_cache = {}
 
+# Raster storage
+RASTER_DIR = os.path.join(os.path.dirname(__file__), 'rasters')
+os.makedirs(RASTER_DIR, exist_ok=True)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -85,6 +89,30 @@ def wayback_tile(wb_id, wb_m, z, y, x):
         return (r.content, 200, {'Content-Type': ctype, 'Cache-Control': 'public, max-age=604800', 'X-Cache': 'MISS'})
     except:
         return ('', 404)
+
+@app.route('/api/upload-raster', methods=['POST'])
+def upload_raster():
+    if 'file' not in request.files:
+        return jsonify({'error': 'Nenhum arquivo'}), 400
+    f = request.files['file']
+    if not f.filename.lower().endswith(('.tif', '.tiff', '.png', '.jpg', '.jpeg')):
+        return jsonify({'error': 'Apenas .tif, .png ou .jpg'}), 400
+    project = request.form.get('project', 'default')
+    for old in os.listdir(RASTER_DIR):
+        if old.startswith(f'{project}_raster.'):
+            os.remove(os.path.join(RASTER_DIR, old))
+    ext = f.filename.rsplit('.', 1)[1].lower()
+    filename = f'{project}_raster.{ext}'
+    f.save(os.path.join(RASTER_DIR, filename))
+    return jsonify({'success': True, 'filename': filename})
+
+@app.route('/api/raster/<project>', methods=['GET'])
+def get_raster(project):
+    for ext in ['tif', 'tiff', 'png', 'jpg', 'jpeg']:
+        path = os.path.join(RASTER_DIR, f'{project}_raster.{ext}')
+        if os.path.isfile(path):
+            return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}')
+    return jsonify({'error': 'Raster não encontrado'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

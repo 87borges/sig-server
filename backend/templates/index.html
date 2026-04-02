@@ -142,7 +142,7 @@
                     <!-- Basemap selector flutuante -->
                     <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
                     <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:200px">
-                        <div style="padding:6px 15px;font-size:0.7em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:1px">Mapas Base</div>
+                        <div style="padding:6px 15px;font-size:0.7em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:1px">Raster Base</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="osm" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>OpenStreetMap</label></div>
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
@@ -154,6 +154,9 @@
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Bing</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="bing_hyb" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Híbrido</label></div>
+                        <div style="border-top:1px solid #eee;margin:6px 15px"></div>
+                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;color:#1a1a1a;font-weight:600"><label style="cursor:pointer">➕ Adicionar raster (.tif)</label></div>
+                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" onchange="uploadRaster(this.files)">
                     </div>
                     <!-- Wayback Timeline -->
                     <div id="wayback-timeline" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
@@ -239,6 +242,48 @@
             if (waybackLayer) { map.removeLayer(waybackLayer); waybackLayer = null; }
         }
 
+        // ===== RASTER UPLOAD =====
+        let customRaster = null;
+
+        function uploadRaster(files) {
+            if (!files.length || !projetoAtual) return;
+            const fd = new FormData();
+            fd.append('file', files[0]);
+            fd.append('project', projetoAtual);
+            fetch('/api/upload-raster', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        loadCustomRaster(projetoAtual);
+                        alert('Raster adicionado ao projeto!');
+                    } else {
+                        alert(data.error || 'Erro ao enviar');
+                    }
+                })
+                .catch(e => alert('Erro: ' + e.message));
+            document.getElementById('raster-upload-input').value = '';
+        }
+
+        function loadCustomRaster(project) {
+            if (customRaster) map.removeLayer(customRaster);
+            const img = new Image();
+            img.onload = function() {
+                const bounds = [[-90, -180], [90, 180]]; // placeholder — full extent
+                customRaster = L.imageOverlay(`/api/raster/${project}`, bounds, {
+                    opacity: 0.7, interactive: true
+                }).addTo(map);
+            };
+            img.onerror = function() {};
+            img.src = `/api/raster/${project}`;
+        }
+
+        function checkCustomRaster() {
+            if (!projetoAtual) return;
+            fetch(`/api/raster/${projetoAtual}`).then(r => {
+                if (r.ok) loadCustomRaster(projetoAtual);
+            }).catch(() => {});
+        }
+
         // ===== PROJETOS =====
         function salvarProjetos() { localStorage.setItem('sig_projects', JSON.stringify(projetos)); }
 
@@ -278,6 +323,7 @@
             document.getElementById('page-subtitle').textContent = projetos[id].nome;
             if (!map) initMap(); else setTimeout(() => map.invalidateSize(), 100);
             carregarCamadas();
+            checkCustomRaster();
         }
 
         function verProjetos(btn) {
