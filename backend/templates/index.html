@@ -603,8 +603,23 @@
                             row.className = 'basemap-row';
                             row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
                             const vis = !!vectorVisibility[v.id];
+                            const color = v.color || '#e74c3c';
+                            const vtype = v._detectedType || 'polygon';
+                            let legendHtml = '';
+                            if (vtype === 'point') {
+                                const m = v.marker || '●';
+                                const ms = v.markerSize || 16;
+                                legendHtml = `<span style="font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
+                            } else if (vtype === 'line') {
+                                legendHtml = `<span style="display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                            } else {
+                                const sc = v.strokeColor || '#333333';
+                                const w = Math.min(v.weight||2, 3);
+                                legendHtml = `<span style="display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                            }
                             row.innerHTML = `
                                 <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                                <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                                 <span onclick="toggleVector('${g.id}','${v.id}')" style="flex:1;cursor:pointer;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
                                 <span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.75em;flex-shrink:0" title="Editar aparência">✏️</span>
                                 <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
@@ -630,6 +645,13 @@
             fetch(`/api/vector/${projetoAtual}/groups/${gid}`, {
                 method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
             }).then(() => loadVectorGroups());
+        }
+
+        function deleteVector(gid, vid) {
+            if (!confirm('Excluir este vetor?')) return;
+            if (vectorLayers[vid]) { map.removeLayer(vectorLayers[vid]); delete vectorLayers[vid]; }
+            delete vectorVisibility[vid];
+            fetch(`/api/vector/${projetoAtual}/groups/${gid}/vector/${vid}`, { method: 'DELETE' }).then(() => loadVectorGroups());
         }
 
         function deleteVectorGroup(gid) {
@@ -710,6 +732,8 @@
                             const vtype = (geojson.features[0].geometry?.type||'').toLowerCase();
                             const isPoint = vtype.includes('point');
                             const isLine = vtype.includes('line');
+                            // Save detected type
+                            vec._detectedType = isPoint ? 'point' : isLine ? 'line' : 'polygon';
                             vectorLayers[vid] = L.geoJSON(geojson, {
                                 style: isPoint ? { opacity: opacity } : {
                                     color: isLine ? color : strokeColor,
@@ -733,6 +757,7 @@
                             if (vectorLayers[vid].getLayers().length === 0) {
                                 alert('Vetor carregado mas sem geometrias visíveis.');
                             }
+                            saveVectorGroups();
                         } else {
                             alert('Não foi possível converter o vetor. Formato: ' + vec.type);
                         }
