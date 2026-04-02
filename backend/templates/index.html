@@ -218,22 +218,11 @@
             const idx = document.getElementById('wayback-select').value;
             if (!waybackItems[idx]) return;
             map.removeLayer(baseLayer);
-            const tileUrl = `https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/${waybackItems[idx].ID}/MapServer/tile/{z}/{y}/{x}`;
-            baseLayer = L.tileLayer(tileUrl, {
+            const wbId = waybackItems[idx].ID;
+            const wbM = waybackItems[idx].M;
+            baseLayer = L.tileLayer(`/api/wayback-tile/${wbId}/${wbM}/{z}/{y}/{x}`, {
                 attribution: '© Esri Wayback', maxZoom: 19
             });
-            baseLayer._loadTile = function(tile, done) {
-                const url = this.getTileUrl(tile.coords);
-                fetch(url, { redirect: 'manual' })
-                    .then(r => r.blob())
-                    .then(blob => {
-                        if (blob.size < 100) { tile.el.style.display = 'none'; done(); return; }
-                        const reader = new FileReader();
-                        reader.onload = () => { tile.el.src = reader.result; done(); };
-                        reader.readAsDataURL(blob);
-                    })
-                    .catch(() => done());
-            };
             baseLayer.addTo(map);
         }
 

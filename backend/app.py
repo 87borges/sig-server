@@ -65,5 +65,12 @@ def get_file(project, filename):
         return send_from_directory(project_dir, secure_filename(filename), mimetype='application/geo+json')
     return send_from_directory(project_dir, secure_filename(filename))
 
+@app.route('/api/wayback-tile/<wb_id>/<wb_m>/<int:z>/<int:y>/<int:x>', methods=['GET'])
+def wayback_tile(wb_id, wb_m, z, y, x):
+    import requests as req
+    url = f'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/{wb_id}/MapServer/tile/{wb_m}/{z}/{y}/{x}'
+    r = req.get(url, timeout=10)
+    return (r.content, 200, {'Content-Type': r.headers.get('Content-Type', 'image/jpeg'), 'Cache-Control': 'public, max-age=86400'})
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
