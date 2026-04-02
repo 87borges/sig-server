@@ -104,7 +104,7 @@ def upload_raster():
     filename = f'{project}_{rid}_raster.tif'
     src = os.path.join(RASTER_DIR, filename)
     f.save(src)
-    # Extract bounds
+    # Extract bounds and CRS, transform to WGS84
     bounds = None
     try:
         import subprocess, json
@@ -112,11 +112,35 @@ def upload_raster():
         if r.returncode == 0:
             info = json.loads(r.stdout)
             corners = info.get('cornerCoordinates', {})
-            if corners:
-                bounds = [[corners.get('lowerLeft', [0,0])[1], corners.get('lowerLeft', [0,0])[0]],
-                          [corners.get('upperRight', [1,1])[1], corners.get('upperRight', [1,1])[0]]]
-    except Exception:
-        pass
+            wgs_bounds = info.get('wgs84Extent', None)
+            if wgs_bounds and isinstance(wgs_bounds, dict):
+                coords = wgs_bounds.get('coordinates', [[]])[0]
+                if len(coords) >= 4:
+                    # [[minX,minY],[minX,maxY],[maxX,maxY],[maxX,minY],[minX,minY]]
+                    bounds = [[coords[0][1], coords[0][0]], [coords[2][1], coords[2][0]]]
+            if not bounds and corners:
+                ll = corners.get('lowerLeft', [0,0])
+                ur = corners.get('upperRight', [0,0])
+                # Check if CRS is not WGS84 — transform with pyproj
+                srs = info.get('spatialReference', {})
+                epsg = None
+                if srs:
+                    # Try to extract EPSG code
+                    auth = srs.get('authority', '')
+                    if 'EPSG' in str(srs):
+                        import re
+                        m = re.search(r'EPSG[:\s]*(\d+)', str(srs))
+                        if m: epsg = int(m.group(1))
+                if epsg and epsg != 4326:
+                    from pyproj import Transformer
+                    t = Transformer.from_crs(f'EPSG:{epsg}', 'EPSG:4326', always_xy=True)
+                    ll_wgs = t.transform(ll[0], ll[1])
+                    ur_wgs = t.transform(ur[0], ur[1])
+                    bounds = [[ll_wgs[1], ll_wgs[0]], [ur_wgs[1], ur_wgs[0]]]
+                else:
+                    bounds = [[ll[1], ll[0]], [ur[1], ur[0]]]
+    except Exception as e:
+        print(f'Bounds extraction error: {e}')
     if not bounds:
         try:
             from PIL import Image
@@ -126,10 +150,38 @@ def upload_raster():
                 if 33922 in tags and 33550 in tags:
                     tp = tags[33922]
                     ps = tags[33550]
-                    bounds = [[tp[4] - img.size[1] * ps[1], tp[3]],
-                              [tp[4], tp[3] + img.size[0] * ps[0]]]
-        except Exception:
-            pass
+                    x_size, y_size = img.size
+                    # Raw bounds in native CRS
+                    minx, maxy = tp[3], tp[4]
+                    maxx = minx + x_size * ps[0]
+                    miny = maxy - y_size * ps[1]
+                    # Try to find EPSG from tags
+                    epsg = None
+                    if 34735 in tags:
+                        wkt = tags[34735]
+                        if isinstance(wkt, (list, tuple)):
+                            wkt = ''.join(chr(c) for c in wkt)
+                        if 'UTM' in str(wkt):
+                            import re
+                            m = re.search(r'(\d{6})', str(wkt))
+                            if m:
+                                zone = int(m.group(1))
+                                if zone > 3000:
+                                    epsg = 32700 + (zone - 300000) // 100  # UTM South
+                                else:
+                                    epsg = 32600 + zone // 100  # UTM North
+                        m = re.search(r'EPSG.*?(\d{4,6})', str(wkt))
+                        if m: epsg = int(m.group(1))
+                    if epsg and epsg != 4326:
+                        from pyproj import Transformer
+                        t = Transformer.from_crs(f'EPSG:{epsg}', 'EPSG:4326', always_xy=True)
+                        ll_wgs = t.transform(minx, miny)
+                        ur_wgs = t.transform(maxx, maxy)
+                        bounds = [[ll_wgs[1], ll_wgs[0]], [ur_wgs[1], ur_wgs[0]]]
+                    else:
+                        bounds = [[miny, minx], [maxy, maxx]]
+        except Exception as e:
+            print(f'Pillow bounds error: {e}')
     # Convert to PNG
     png_path = os.path.join(RASTER_DIR, f'{project}_{rid}_raster.png')
     converted = False
