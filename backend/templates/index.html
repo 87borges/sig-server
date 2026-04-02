@@ -158,7 +158,7 @@
                         <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
-                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;color:white;font-weight:600"><label style="cursor:pointer">➕ Adicionar raster (.tif)</label></div>
+                        <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">Adicionar (.tif)</label></div>
                         <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
                     </div>
                     <!-- Wayback Timeline -->
@@ -395,9 +395,9 @@
                         row.style.gap = '6px';
                         const checked = customRasters[m.id] ? 'checked' : '';
                         row.innerHTML = `
-                            <input type="checkbox" id="ck_${m.id}" ${checked} onchange="toggleRaster('${m.id}', this.checked)" style="accent-color:white;flex-shrink:0">
-                            <label for="ck_${m.id}" style="flex:1;cursor:pointer;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</label>
-                            <span onclick="deleteRaster('${m.id}')" style="cursor:pointer;opacity:0.5;font-size:0.85em;flex-shrink:0;padding:2px 4px" title="Excluir raster">🗑️</span>
+                            <input type="checkbox" id="ck_${m.id}" ${checked} onchange="toggleRaster('${m.id}', this.checked)" style="accent-color:inherit;flex-shrink:0">
+                            <label for="ck_${m.id}" style="flex:1;cursor:pointer;font-size:0.78em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit">${m.name}</label>
+                            <span onclick="deleteRaster('${m.id}')" style="cursor:pointer;opacity:0.5;font-size:0.78em;flex-shrink:0;padding:2px 4px" title="Excluir raster">🗑️</span>
                         `;
                         list.appendChild(row);
                     });
