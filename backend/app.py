@@ -107,7 +107,7 @@ def upload_raster():
     filename = f'{project}_raster.tif'
     src = os.path.join(RASTER_DIR, filename)
     f.save(src)
-    # Try to extract bounds
+    # Try to extract bounds and convert to PNG
     bounds = None
     try:
         import subprocess
@@ -119,21 +119,40 @@ def upload_raster():
             if corners:
                 bounds = [[corners.get('lowerLeft', [0,0])[1], corners.get('lowerLeft', [0,0])[0]],
                           [corners.get('upperRight', [1,1])[1], corners.get('upperRight', [1,1])[0]]]
-            # Convert to PNG for browser display
-            png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
-            subprocess.run(['gdal_translate', '-of', 'PNG', '-outsize', '4096', '4096', src, png_path],
-                          capture_output=True, timeout=60)
-    except Exception as e:
+        # Convert to PNG for browser
+        png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+        subprocess.run(['gdal_translate', '-of', 'PNG', '-outsize', '4096', '4096', src, png_path],
+                      capture_output=True, timeout=60)
+    except Exception:
         pass
+    # Fallback: convert with Pillow if GDAL not available
+    png_path = os.path.join(RASTER_DIR, f'{project}_raster.png')
+    if not os.path.isfile(png_path):
+        try:
+            from PIL import Image
+            img = Image.open(src)
+            img.save(png_path, 'PNG')
+            # Extract bounds from TIF tags if available
+            if not bounds and hasattr(img, 'tag_v2'):
+                tags = img.tag_v2
+                if 33922 in tags:  # ModelTiepointTag
+                    tp = tags[33922]
+                    if 33550 in tags:  # ModelPixelScaleTag
+                        ps = tags[33550]
+                        x_size, y_size = img.size
+                        bounds = [[tp[4] - y_size * ps[1], tp[3]],
+                                  [tp[4], tp[3] + x_size * ps[0]]]
+        except Exception:
+            pass
     return jsonify({'success': True, 'filename': filename, 'bounds': bounds})
 
 @app.route('/api/raster/<project>', methods=['GET'])
 def get_raster(project):
-    # Serve PNG if available, else TIF
     for ext in ['png', 'tif']:
         path = os.path.join(RASTER_DIR, f'{project}_raster.{ext}')
         if os.path.isfile(path):
-            return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}')
+            ctype = 'image/png' if ext == 'png' else 'image/tiff'
+            return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}', mimetype=ctype)
     return jsonify({'error': 'Raster não encontrado'}), 404
 
 if __name__ == '__main__':
