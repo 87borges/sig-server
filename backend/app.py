@@ -435,6 +435,7 @@ def get_vector_geojson(project, vid):
                     break
         r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '/vsistdout/', main_file],
                           capture_output=True, text=True, timeout=60)
+        print(f'ogr2ogr for {vid}: returncode={r.returncode}, stdout_len={len(r.stdout)}, stderr={r.stderr[:200]}')
         if r.returncode == 0 and r.stdout:
             return (r.stdout, 200, {'Content-Type': 'application/geo+json'})
         return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500

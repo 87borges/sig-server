@@ -622,6 +622,11 @@
                                 style: { color: color, weight: weight, fillColor: color, fillOpacity: opacity * 0.3, opacity: opacity },
                                 onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
                             }).addTo(map);
+                            if (vectorLayers[vid].getLayers().length === 0) {
+                                alert('Vetor carregado mas sem geometrias visíveis.');
+                            }
+                        } else {
+                            alert('Não foi possível converter o vetor. Formato: ' + vec.type);
                         }
                     } catch(e) { console.error(e); alert('Erro ao carregar vetor: ' + e.message); }
                 }
