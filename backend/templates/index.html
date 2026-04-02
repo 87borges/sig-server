@@ -144,6 +144,7 @@
                     <div id="basemap-btn" onclick="document.getElementById('basemap-menu').style.display = document.getElementById('basemap-menu').style.display === 'none' ? 'block' : 'none'" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
                     <div id="basemap-menu" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:white;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);padding:8px 0;min-width:200px">
                         <div style="padding:6px 15px;font-size:0.7em;color:#aaa;font-weight:600;text-transform:uppercase;letter-spacing:1px">Raster Base</div>
+                        <div class="basemap-row"><input type="radio" name="basemap" value="none" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Nenhum</label></div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="osm" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>OpenStreetMap</label></div>
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
                         <div class="basemap-row"><input type="radio" name="basemap" value="esri_sat" onchange="trocarBase(this.value);document.getElementById('basemap-menu').style.display='none'"><label>Satélite</label></div>
@@ -185,6 +186,12 @@
         }
 
         function trocarBase(tipo) {
+            if (tipo === 'none') {
+                if (baseLayer) map.removeLayer(baseLayer);
+                baseLayer = null;
+                fecharWayback();
+                return;
+            }
             map.removeLayer(baseLayer);
             const bases = {
                 'osm': ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', '© OSM', 19],
@@ -246,8 +253,7 @@
         }
 
         // ===== RASTER UPLOAD =====
-        let customRaster = null;
-        let rasterBounds = null;
+        let customRasters = {};  // id -> L.imageOverlay
         let rasterMetas = [];
 
         function uploadRaster(files) {
@@ -260,7 +266,7 @@
                 .then(data => {
                     if (data.success) {
                         loadRasterList();
-                        selectRaster(data.id);
+                        toggleRaster(data.id, true);
                     } else {
                         alert(data.error || 'Erro ao enviar');
                     }
@@ -280,23 +286,45 @@
                     metas.forEach(m => {
                         const row = document.createElement('div');
                         row.className = 'basemap-row';
-                        row.style.position = 'relative';
-                        row.innerHTML = `<input type="radio" name="basemap" value="raster_${m.id}" id="rb_${m.id}" onchange="selectRaster('${m.id}')"><label for="rb_${m.id}">${m.name}</label>`;
+                        row.style.display = 'flex';
+                        row.style.alignItems = 'center';
+                        row.style.gap = '6px';
+                        const checked = customRasters[m.id] ? 'checked' : '';
+                        row.innerHTML = `
+                            <input type="checkbox" id="ck_${m.id}" ${checked} onchange="toggleRaster('${m.id}', this.checked)" style="accent-color:#1a1a1a;flex-shrink:0">
+                            <label for="ck_${m.id}" style="flex:1;cursor:pointer;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.name}</label>
+                            <span onclick="deleteRaster('${m.id}')" style="cursor:pointer;opacity:0.5;font-size:0.85em;flex-shrink:0;padding:2px 4px" title="Excluir raster">🗑️</span>
+                        `;
                         list.appendChild(row);
                     });
                 });
         }
 
-        function selectRaster(rid) {
+        function toggleRaster(rid, show) {
             const meta = rasterMetas.find(m => m.id === rid);
             if (!meta || !meta.bounds) return;
-            rasterBounds = meta.bounds;
-            if (customRaster) map.removeLayer(customRaster);
-            customRaster = L.imageOverlay(`/api/raster/${projetoAtual}/${rid}`, meta.bounds, {
-                opacity: 0.85, interactive: true
-            }).addTo(map);
-            map.fitBounds(meta.bounds, { padding: [30, 30] });
-            document.getElementById('basemap-menu').style.display = 'none';
+            if (show) {
+                if (!customRasters[rid]) {
+                    customRasters[rid] = L.imageOverlay(`/api/raster/${projetoAtual}/${rid}`, meta.bounds, {
+                        opacity: 0.85, interactive: true
+                    });
+                }
+                customRasters[rid].addTo(map);
+                map.fitBounds(meta.bounds, { padding: [30, 30] });
+            } else {
+                if (customRasters[rid]) {
+                    map.removeLayer(customRasters[rid]);
+                }
+            }
+        }
+
+        function deleteRaster(rid) {
+            if (!confirm('Excluir este raster?')) return;
+            if (customRasters[rid]) { map.removeLayer(customRasters[rid]); delete customRasters[rid]; }
+            fetch(`/api/raster/${projetoAtual}/${rid}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(() => loadRasterList())
+                .catch(() => {});
         }
 
         function checkCustomRaster() {
