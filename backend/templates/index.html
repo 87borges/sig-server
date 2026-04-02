@@ -79,9 +79,10 @@
         .basemap-row { padding:5px 12px; border-bottom:none; display:flex; align-items:center; gap:6px; }
         .basemap-row label { font-size: 0.85em; cursor: pointer; }
         .basemap-row input { cursor: pointer; }
-        .bm-btn { padding:4px 8px;border-radius:4px;cursor:pointer;transition:background 0.2s;flex:1;user-select:none;font-size:0.78em;color:white }
+        .bm-btn { padding:4px 8px;border-radius:4px;cursor:pointer;transition:background 0.2s,color 0.2s;flex:1;user-select:none;font-size:0.78em;color:rgba(0,0,0,0.55) }
         .bm-btn:hover { background:rgba(255,255,255,0.2); }
-        .bm-btn.bm-active { background:rgba(255,255,255,0.25);color:white;font-weight:600; }
+        .bm-btn.bm-active { background:rgba(255,255,255,0.25);font-weight:600; }
+        .bm-btn.bm-active.bm-sat { color:white; }
 
         /* Empty state */
         .empty-state { text-align: center; padding: 40px 20px; color: #888; }
@@ -149,15 +150,15 @@
                         <div style="padding:4px 12px;font-size:0.6em;color:rgba(255,255,255,0.7);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Raster Base</div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('osm',this)">OpenStreetMap</div></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px">ESRI</div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_sat',this)">Satélite</div></div>
+                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_sat',this)" data-sat>Satélite</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_topo',this)">Topográfico</div></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px">GOOGLE</div>
-                        <div class="basemap-row"><div class="bm-btn bm-active" onclick="toggleBase('google_sat',this)">Satélite</div></div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_hyb',this)">Híbrido</div></div>
+                        <div class="basemap-row"><div class="bm-btn bm-active bm-sat" onclick="toggleBase('google_sat',this)" data-sat>Satélite</div></div>
+                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_hyb',this)" data-sat>Híbrido</div></div>
                         <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_ter',this)">Terreno</div></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px">Bing</div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_sat',this)">Satélite</div></div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_hyb',this)">Híbrido</div></div>
+                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_sat',this)" data-sat>Satélite</div></div>
+                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('bing_hyb',this)" data-sat>Híbrido</div></div>
                         <div style="border-top:1px solid #eee;margin:6px 15px"></div>
                         <div style="padding:3px 12px;font-size:0.58em;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
@@ -201,6 +202,7 @@
             // Ativar nova
             baseLayerType = tipo;
             btn.classList.add('bm-active');
+            if (btn.hasAttribute('data-sat')) btn.classList.add('bm-sat');
             if (baseLayer) map.removeLayer(baseLayer);
             const bases = {
                 'osm': ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', '© OSM', 19],
