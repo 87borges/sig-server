@@ -562,26 +562,33 @@
             const gid = rasterUploadGroupId;
             const fd = new FormData();
             for (let i = 0; i < files.length; i++) fd.append('file', files[i]);
-            const resp = await fetch(`/api/raster-groups/${projetoAtual}/group/${gid}/upload`, { method: 'POST', body: fd });
-            const result = await resp.json();
-            // Reload groups and show new rasters
-            await fetch(`/api/raster-groups/${projetoAtual}`).then(r => r.json()).then(groups => {
-                rasterGroups = groups;
-                renderRasterMenu();
-            });
-            // Now add layers for new rasters
-            if (result.rasters) {
-                result.rasters.forEach(r => {
-                    rasterVisibility[r.id] = true;
-                    rasterGroupVisibility[gid] = true;
-                    if (r.bounds && !customRasters[r.id]) {
-                        customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, r.bounds, { opacity: 0.85, interactive: true });
-                        customRasters[r.id].addTo(map);
-                    }
+            try {
+                const resp = await fetch(`/api/raster-groups/${projetoAtual}/group/${gid}/upload`, { method: 'POST', body: fd });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert('Erro ao carregar raster: ' + (err.error || resp.status));
+                    return;
+                }
+                const result = await resp.json();
+                if (result.rasters) {
+                    result.rasters.forEach(r => {
+                        rasterVisibility[r.id] = true;
+                        rasterGroupVisibility[gid] = true;
+                        if (!customRasters[r.id]) {
+                            const bounds = r.bounds || [[-90, -180], [90, 180]];
+                            customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, bounds, { opacity: 0.85, interactive: true });
+                            customRasters[r.id].addTo(map);
+                        }
+                    });
+                    if (result.bounds) map.fitBounds(result.bounds, { padding: [30, 30] });
+                }
+                await fetch(`/api/raster-groups/${projetoAtual}`).then(r => r.json()).then(groups => {
+                    rasterGroups = groups;
+                    renderRasterMenu();
                 });
-                if (result.bounds) map.fitBounds(result.bounds, { padding: [30, 30] });
+            } catch(e) {
+                alert('Erro ao carregar raster: ' + e.message);
             }
-            renderRasterMenu();
             document.getElementById('raster-upload-input').value = '';
         }
 
