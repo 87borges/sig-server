@@ -159,7 +159,7 @@
                         <div style="padding:4px 15px;font-size:0.65em;color:#bbb;text-transform:uppercase;letter-spacing:0.5px">Personalizados</div>
                         <div id="raster-list"></div>
                         <div class="basemap-row" onclick="document.getElementById('basemap-menu').style.display='none';document.getElementById('raster-upload-input').click()" style="cursor:pointer;color:#1a1a1a;font-weight:600"><label style="cursor:pointer">➕ Adicionar raster (.tif)</label></div>
-                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" onchange="uploadRaster(this.files)">
+                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRasters(this.files)">
                     </div>
                     <!-- Wayback Timeline -->
                     <div id="wayback-timeline" style="display:none;position:absolute;top:0;left:0;right:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,0.85),rgba(0,0,0,0.7));padding:12px 20px">
@@ -252,41 +252,120 @@
         }
 
         // ===== RASTER UPLOAD =====
-        let customRasters = {};  // id -> L.imageOverlay
+        let customRasters = {};
         let rasterMetas = [];
+        let rasterAbortController = null;
+        let rasterOverlay = null;
 
-        function uploadRaster(files) {
+        function showRasterOverlay() {
+            if (rasterOverlay) return;
+            rasterOverlay = document.createElement('div');
+            rasterOverlay.id = 'raster-overlay';
+            rasterOverlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center';
+            const box = document.createElement('div');
+            box.style.cssText = 'background:white;border-radius:16px;padding:28px 36px;box-shadow:0 8px 40px rgba(0,0,0,0.3);min-width:360px;max-width:500px;text-align:center';
+            box.innerHTML = `
+                <div style="font-size:1.6em;margin-bottom:12px">⏳</div>
+                <div id="raster-upload-title" style="font-weight:600;font-size:1.05em;margin-bottom:6px">Enviando rasters...</div>
+                <div id="raster-upload-file" style="font-size:0.8em;color:#888;margin-bottom:14px"></div>
+                <div style="background:#eee;border-radius:8px;overflow:hidden;height:10px;margin-bottom:6px">
+                    <div id="raster-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#1d4ed8);border-radius:8px;transition:width 0.3s"></div>
+                </div>
+                <div id="raster-progress-text" style="font-size:0.8em;color:#888;margin-bottom:14px">0%</div>
+                <button id="raster-cancel-btn" onclick="cancelRasterUpload()" style="background:#ef4444;color:white;border:none;padding:8px 24px;border-radius:8px;cursor:pointer;font-size:0.9em">⏹ Interromper</button>
+            `;
+            rasterOverlay.appendChild(box);
+            document.body.appendChild(rasterOverlay);
+        }
+
+        function updateRasterOverlay(file, progress, totalFiles, currentIdx) {
+            const title = document.getElementById('raster-upload-title');
+            const fname = document.getElementById('raster-upload-file');
+            const bar = document.getElementById('raster-progress-bar');
+            const text = document.getElementById('raster-progress-text');
+            if (title) title.textContent = `Enviando rasters (${currentIdx}/${totalFiles})...`;
+            if (fname) fname.textContent = file;
+            const pct = Math.round(progress);
+            if (bar) bar.style.width = pct + '%';
+            if (text) text.textContent = pct + '%';
+        }
+
+        function hideRasterOverlay() {
+            if (rasterOverlay) { document.body.removeChild(rasterOverlay); rasterOverlay = null; }
+        }
+
+        function cancelRasterUpload() {
+            if (rasterAbortController) rasterAbortController.abort();
+        }
+
+        async function uploadRasters(files) {
             if (!files.length || !projetoAtual) return;
-            const fname = files[0].name;
-            const msg = document.createElement('div');
-            msg.id = 'raster-loading-msg';
-            msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(0,0,0,0.85);color:white;padding:24px 36px;border-radius:12px;font-size:1em;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.4)';
-            msg.innerHTML = '<div style="font-size:1.5em;margin-bottom:8px">⏳</div>Carregando raster...<br><small style="opacity:0.7">' + fname + '</small>';
-            document.body.appendChild(msg);
-            const fd = new FormData();
-            fd.append('file', files[0]);
-            fd.append('project', projetoAtual);
-            fetch('/api/upload-raster', { method: 'POST', body: fd })
-                .then(r => r.json())
-                .then(data => {
-                    document.body.removeChild(msg);
-                    if (data.success) {
-                        const ok = document.createElement('div');
-                        ok.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(34,197,94,0.95);color:white;padding:20px 32px;border-radius:12px;font-size:1em;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
-                        ok.innerHTML = '✅ Raster carregado com sucesso!';
-                        document.body.appendChild(ok);
-                        setTimeout(() => document.body.removeChild(ok), 2000);
-                        loadRasterList();
-                        toggleRaster(data.id, true);
+            showRasterOverlay();
+            const total = files.length;
+            let success = 0, failed = 0;
+            for (let i = 0; i < total; i++) {
+                const file = files[i];
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('project', projetoAtual);
+                rasterAbortController = new AbortController();
+                try {
+                    const xhr = new XMLHttpRequest();
+                    const result = await new Promise((resolve, reject) => {
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const filePct = (e.loaded / e.total) * 100;
+                                const overallPct = ((i + e.loaded / e.total) / total) * 100;
+                                updateRasterOverlay(file.name, overallPct, total, i + 1);
+                            }
+                        };
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                resolve(JSON.parse(xhr.responseText));
+                            } else {
+                                reject(new Error(`HTTP ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = () => reject(new Error('Erro de rede'));
+                        xhr.onabort = () => reject(new Error('Cancelado'));
+                        xhr.open('POST', '/api/upload-raster');
+                        xhr.send(fd);
+                        rasterAbortController.signal.addEventListener('abort', () => {
+                            xhr.abort();
+                            reject(new Error('Cancelado pelo usuário'));
+                        });
+                    });
+                    if (result.success) {
+                        success++;
+                        toggleRaster(result.id, true);
                     } else {
-                        alert('❌ Falha: ' + (data.error || 'Erro desconhecido'));
+                        failed++;
                     }
-                })
-                .catch(e => {
-                    document.body.removeChild(msg);
-                    alert('❌ Erro: ' + e.message);
-                });
-            document.getElementById('raster-upload-input').value = '';
+                } catch (e) {
+                    if (e.message === 'Cancelado' || e.message === 'Cancelado pelo usuário') {
+                        hideRasterOverlay();
+                        return;
+                    }
+                    failed++;
+                }
+            }
+            hideRasterOverlay();
+            loadRasterList();
+            if (failed === 0) {
+                showRasterFeedback('✅', `${success} raster(s) carregado(s) com sucesso!`, '#22c55e');
+            } else if (success > 0) {
+                showRasterFeedback('⚠️', `${success} ok, ${failed} falhou`, '#f59e0b');
+            } else {
+                showRasterFeedback('❌', `${failed} raster(s) falhou(aram)`, '#ef4444');
+            }
+        }
+
+        function showRasterFeedback(icon, text, color) {
+            const el = document.createElement('div');
+            el.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:${color};color:white;padding:20px 32px;border-radius:12px;font-size:1em;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3)`;
+            el.innerHTML = `<div style="font-size:1.5em;margin-bottom:6px">${icon}</div>${text}`;
+            document.body.appendChild(el);
+            setTimeout(() => document.body.removeChild(el), 2500);
         }
 
         function loadRasterList() {
