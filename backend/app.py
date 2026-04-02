@@ -131,19 +131,26 @@ def upload_raster():
         try:
             from PIL import Image
             img = Image.open(src)
+            # Handle multi-band GeoTIFF: convert to RGB
+            if img.mode == 'RGBA':
+                img = img.convert('RGBA')
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            # Limit size for browser performance
+            img.thumbnail((4096, 4096), Image.LANCZOS)
             img.save(png_path, 'PNG')
             # Extract bounds from TIF tags if available
             if not bounds and hasattr(img, 'tag_v2'):
                 tags = img.tag_v2
-                if 33922 in tags:  # ModelTiepointTag
+                if 33922 in tags:
                     tp = tags[33922]
-                    if 33550 in tags:  # ModelPixelScaleTag
+                    if 33550 in tags:
                         ps = tags[33550]
                         x_size, y_size = img.size
                         bounds = [[tp[4] - y_size * ps[1], tp[3]],
                                   [tp[4], tp[3] + x_size * ps[0]]]
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Pillow fallback error: {e}')
     return jsonify({'success': True, 'filename': filename, 'bounds': bounds})
 
 @app.route('/api/raster/<project>', methods=['GET'])
@@ -151,8 +158,11 @@ def get_raster(project):
     for ext in ['png', 'tif']:
         path = os.path.join(RASTER_DIR, f'{project}_raster.{ext}')
         if os.path.isfile(path):
+            size = os.path.getsize(path)
             ctype = 'image/png' if ext == 'png' else 'image/tiff'
+            print(f'Serving raster: {ext} size={size}')
             return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}', mimetype=ctype)
+    print(f'Raster not found for project: {project}')
     return jsonify({'error': 'Raster não encontrado'}), 404
 
 if __name__ == '__main__':
