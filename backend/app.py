@@ -271,6 +271,15 @@ def list_vector_groups(project):
     return jsonify([])
 
 @app.route('/api/vector/<project>/groups', methods=['POST'])
+def save_vector_groups(project):
+    import json
+    data = request.get_json() or []
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    with open(meta_path, 'w') as mf:
+        json.dump(data, mf)
+    return jsonify({'success': True})
+
+@app.route('/api/vector/<project>/group', methods=['POST'])
 def create_vector_group(project):
     import json, uuid
     data = request.get_json() or {}
@@ -372,6 +381,39 @@ def get_vector_file(project, filename):
     if os.path.isfile(path):
         return send_from_directory(VECTOR_DIR, secure_filename(filename))
     return jsonify({'error': 'Arquivo não encontrado'}), 404
+
+@app.route('/api/vector/<project>/geojson/<vid>', methods=['GET'])
+def get_vector_geojson(project, vid):
+    """Convert shapefile/gpkg to GeoJSON using ogr2ogr"""
+    import subprocess, json
+    # Find all files for this vector
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    if not files:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    # Find main file
+    main_file = None
+    for f in files:
+        ext = f.rsplit('.', 1)[-1].lower()
+        if ext in ('shp', 'gpkg'):
+            main_file = os.path.join(VECTOR_DIR, f)
+            break
+    if not main_file:
+        # Maybe it's a zip or kml already processed
+        for f in files:
+            ext = f.rsplit('.', 1)[-1].lower()
+            if ext in ('kml', 'geojson'):
+                main_file = os.path.join(VECTOR_DIR, f)
+                break
+    if not main_file:
+        return jsonify({'error': 'Formato não suportado para conversão'}), 400
+    try:
+        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '/vsistdout/', main_file],
+                          capture_output=True, text=True, timeout=30)
+        if r.returncode == 0 and r.stdout:
+            return (r.stdout, 200, {'Content-Type': 'application/geo+json'})
+        return jsonify({'error': f'Conversão falhou: {r.stderr[:200]}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
