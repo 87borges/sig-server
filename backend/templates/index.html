@@ -606,7 +606,12 @@
                     try {
                         let geojson = null;
                         if (vec.type === 'kml' || vec.type === 'kmz') {
-                            const resp = await fetch(`/api/vector/${projetoAtual}/file/${vec.filename}`);
+                            // Find file by vid prefix
+                            const listResp = await fetch(`/api/vector/${projetoAtual}/files/${vid}`);
+                            const listData = await listResp.json();
+                            const kmlFile = listData.files.find(f => f.endsWith('.kml') || f.endsWith('.kmz'));
+                            if (!kmlFile) { alert('Arquivo KML não encontrado'); return; }
+                            const resp = await fetch(`/api/vector/${projetoAtual}/file/${kmlFile}`);
                             if (!resp.ok) { alert('Erro ao buscar arquivo: ' + resp.status); return; }
                             const text = await resp.text();
                             console.log('KML text length:', text.length);
