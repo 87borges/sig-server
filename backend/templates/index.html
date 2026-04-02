@@ -560,34 +560,66 @@
         async function uploadRastersToGroup(files) {
             if (!files.length || !rasterUploadGroupId || !projetoAtual) return;
             const gid = rasterUploadGroupId;
-            const fd = new FormData();
-            for (let i = 0; i < files.length; i++) fd.append('file', files[i]);
-            try {
-                const resp = await fetch(`/api/raster-groups/${projetoAtual}/group/${gid}/upload`, { method: 'POST', body: fd });
-                if (!resp.ok) {
-                    const err = await resp.json();
-                    alert('Erro ao carregar raster: ' + (err.error || resp.status));
-                    return;
-                }
-                const result = await resp.json();
-                if (result.rasters) {
-                    result.rasters.forEach(r => {
-                        rasterVisibility[r.id] = true;
-                        rasterGroupVisibility[gid] = true;
-                        if (!customRasters[r.id]) {
-                            const bounds = r.bounds || [[-90, -180], [90, 180]];
-                            customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, bounds, { opacity: 0.85, interactive: true });
-                            customRasters[r.id].addTo(map);
-                        }
+            showRasterOverlay();
+            const total = files.length;
+            let success = 0, failed = 0;
+            for (let i = 0; i < total; i++) {
+                const file = files[i];
+                const fd = new FormData();
+                fd.append('file', file);
+                rasterAbortController = new AbortController();
+                try {
+                    const xhr = new XMLHttpRequest();
+                    const result = await new Promise((resolve, reject) => {
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const overallPct = ((i + e.loaded / e.total) / total) * 100;
+                                updateRasterOverlay(file.name, overallPct, total, i + 1);
+                            }
+                        };
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try { resolve(JSON.parse(xhr.responseText)); }
+                                catch(e) { reject(new Error('Resposta inválida do servidor')); }
+                            } else {
+                                reject(new Error(`HTTP ${xhr.status}`));
+                            }
+                        };
+                        xhr.onerror = () => reject(new Error('Erro de rede'));
+                        xhr.onabort = () => reject(new Error('Cancelado'));
+                        xhr.open('POST', `/api/raster-groups/${projetoAtual}/group/${gid}/upload`);
+                        xhr.send(fd);
+                        rasterAbortController.signal.addEventListener('abort', () => xhr.abort());
                     });
-                    if (result.bounds) map.fitBounds(result.bounds, { padding: [30, 30] });
+                    if (result.rasters) {
+                        result.rasters.forEach(r => {
+                            rasterVisibility[r.id] = true;
+                            rasterGroupVisibility[gid] = true;
+                            if (!customRasters[r.id]) {
+                                const bounds = r.bounds || [[-90, -180], [90, 180]];
+                                customRasters[r.id] = L.imageOverlay(`/api/raster/${projetoAtual}/${r.id}`, bounds, { opacity: 0.85, interactive: true });
+                                customRasters[r.id].addTo(map);
+                            }
+                        });
+                        if (result.bounds) map.fitBounds(result.bounds, { padding: [30, 30] });
+                        success++;
+                    } else {
+                        failed++;
+                    }
+                } catch (e) {
+                    if (e.message === 'Cancelado') { hideRasterOverlay(); return; }
+                    failed++;
                 }
-                await fetch(`/api/raster-groups/${projetoAtual}`).then(r => r.json()).then(groups => {
-                    rasterGroups = groups;
-                    renderRasterMenu();
-                });
-            } catch(e) {
-                alert('Erro ao carregar raster: ' + e.message);
+            }
+            hideRasterOverlay();
+            loadRasterGroups();
+            renderRasterMenu();
+            if (failed === 0) {
+                showRasterFeedback('✅', `${success} raster(s) carregado(s)`, '#22c55e');
+            } else if (success > 0) {
+                showRasterFeedback('⚠️', `${success} ok, ${failed} falhou`, '#f59e0b');
+            } else {
+                showRasterFeedback('❌', `Falha ao carregar`, '#ef4444');
             }
             document.getElementById('raster-upload-input').value = '';
         }
