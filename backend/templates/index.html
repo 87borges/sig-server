@@ -218,7 +218,7 @@
             const idx = document.getElementById('wayback-select').value;
             if (!waybackItems[idx]) return;
             map.removeLayer(baseLayer);
-            baseLayer = L.tileLayer(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/${waybackItems[idx].ID}/{z}/{y}/{x}`, {
+            baseLayer = L.tileLayer(`https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/${waybackItems[idx].ID}/MapServer/tile/{z}/{y}/{x}`, {
                 attribution: '© Esri Wayback', maxZoom: 19
             }).addTo(map);
         }
