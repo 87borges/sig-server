@@ -58,23 +58,6 @@
         #map { width: 100%; height: 100%; }
         .leaflet-control-layers { font-size: 0.85em; }
 
-        /* Painel lateral do mapa */
-        .map-panel { width: 300px; background: rgba(255,255,255,0.45); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); height: 100%; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); z-index: 40; position: absolute; left: 0; top: 0; }
-        .map-panel-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; }
-        .layer-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
-        .layer-item:hover { background: #f9f9f9; }
-        .layer-name { font-size: 0.9em; }
-        .layer-type { font-size: 0.7em; color: #888; }
-        .toggle { width: 40px; height: 22px; background: #ccc; border-radius: 11px; cursor: pointer; position: relative; transition: background 0.2s; }
-        .toggle.on { background: #1a1a1a; }
-        .toggle::after { content: ''; width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: left 0.2s; }
-        .toggle.on::after { left: 20px; }
-
-        /* Upload area */
-        .upload-area { padding: 15px; border: 2px dashed #ddd; border-radius: 8px; text-align: center; margin: 15px; cursor: pointer; transition: border-color 0.2s; }
-        .upload-area:hover { border-color: #1a1a1a; }
-        .upload-area p { font-size: 0.85em; color: #888; }
-
         /* Basemap selector */
         .basemap-row { padding:5px 12px; border-bottom:none; display:flex; align-items:center; gap:6px; }
         .basemap-row label { font-size: 0.85em; cursor: pointer; }
@@ -83,13 +66,7 @@
         .bm-btn:hover { background:rgba(255,255,255,0.2); }
         .bm-btn.bm-active { background:rgba(255,255,255,0.25);font-weight:600; }
 
-        /* Empty state */
-        .empty-state { text-align: center; padding: 40px 20px; color: #888; }
-        .empty-state .icon { font-size: 3em; margin-bottom: 10px; }
-
         @media (max-width: 768px) {
-            .map-panel { width: 220px; }
-        }
         .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
     </style>
 </head>
@@ -135,14 +112,6 @@
 
             <!-- Mapa -->
             <div class="view" id="view-mapa">
-                <div class="map-panel">
-                    <div class="map-panel-header">🗺️ Camadas</div>
-                    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                        <p>📎 Clique para enviar<br><small>.shp .kml .kmz .gpkg .zip</small></p>
-                        <input type="file" id="file-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadFiles(this.files)">
-                    </div>
-                    <div id="layers-list"></div>
-                </div>
                 <div style="flex:1;position:relative;width:100%;height:100%"><div id="map" style="width:100%;height:100%;position:absolute;inset:0"></div>
                     <!-- Side Panel -->
                     <div id="side-panel" style="display:none;position:absolute;top:10px;left:10px;bottom:10px;width:280px;z-index:1000;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);overflow:hidden;display:none;flex-direction:column">
@@ -1392,7 +1361,6 @@
             document.getElementById('projeto-nome').textContent = '📁 ' + projetos[id].nome;
             document.getElementById('page-subtitle').textContent = projetos[id].nome;
             if (!map) initMap(); else setTimeout(() => map.invalidateSize(), 100);
-            carregarCamadas();
             checkCustomRaster();
             loadVectorGroups();
             autoShowExistingVectors();
@@ -1420,71 +1388,6 @@
         function mostrarView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-        }
-
-        // ===== CAMADAS =====
-        function carregarCamadas() {
-            fetch(`/api/projects/${projetoAtual}/layers`).then(r => r.json()).then(data => {
-                const lista = document.getElementById('layers-list');
-                lista.innerHTML = '';
-                if (!data.layers || data.layers.length === 0) {
-                    lista.innerHTML = '<div class="empty-state" style="padding:20px"><p style="font-size:0.85em">Nenhuma camada</p></div>';
-                    return;
-                }
-                data.layers.forEach(layer => {
-                    const div = document.createElement('div');
-                    div.className = 'layer-item';
-                    div.innerHTML = `<div><div class="layer-name">${layer.name}</div><div class="layer-type">.${layer.type}</div></div><div class="toggle on" onclick="toggleCamada(this, '${layer.filename}')"></div>`;
-                    lista.appendChild(div);
-                });
-            });
-        }
-
-        function toggleCamada(btn, filename) {
-            const isOn = btn.classList.toggle('on');
-            if (isOn) {
-                carregarCamadaGeoJSON(filename);
-            } else if (overlays[filename]) {
-                map.removeLayer(overlays[filename]);
-            }
-        }
-
-        function carregarCamadaGeoJSON(filename) {
-            if (overlays[filename]) { map.addLayer(overlays[filename]); return; }
-            fetch(`/api/projects/${projetoAtual}/file/${filename}`).then(r => {
-                if (!r.ok) return null;
-                const ct = r.headers.get('content-type');
-                if (ct && ct.includes('geojson')) return r.json();
-                return r.text();
-            }).then(data => {
-                if (!data) return;
-                try {
-                    let geojson;
-                    if (typeof data === 'string') {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(data, 'text/xml');
-                        geojson = toGeoJSON.kml(doc);
-                    } else {
-                        geojson = data;
-                    }
-                    overlays[filename] = L.geoJSON(geojson, {
-                        style: { color: '#1a1a1a', weight: 2, fillColor: '#333', fillOpacity: 0.3 },
-                        onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
-                    }).addTo(map);
-                    map.fitBounds(overlays[filename].getBounds());
-                } catch (e) { console.error('Erro ao carregar camada:', e); }
-            });
-        }
-
-        // ===== UPLOAD =====
-        function uploadFiles(files) {
-            if (!projetoAtual) return;
-            const fd = new FormData();
-            Array.from(files).forEach(f => fd.append('file', f));
-            fetch(`/api/projects/${projetoAtual}/upload`, { method: 'POST', body: fd })
-            .then(r => r.json()).then(data => { if (data.success) carregarCamadas(); else alert(data.error || 'Erro ao enviar'); })
-            .catch(e => alert('Erro: ' + e.message));
-            document.getElementById('file-input').value = '';
         }
 
         // Init
