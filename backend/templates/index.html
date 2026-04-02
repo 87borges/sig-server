@@ -169,7 +169,6 @@
                         <div style="border-top:1px solid rgba(128,128,128,0.2);margin:4px 12px"></div>
                         <div class="basemap-row" onclick="createVectorGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
                         <input type="file" id="vector-upload-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadVectors(this.files)">
-                    </div>
                     <!-- Wayback Timeline -->
                     <div id="wayback-timeline" style="display:none;position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:12px;padding:10px 18px;box-shadow:0 2px 10px rgba(0,0,0,0.2)">
                         <div style="display:flex;align-items:center;gap:12px;min-width:280px">
@@ -585,11 +584,11 @@
         async function uploadVectors(files) {
             if (!files.length || !vectorUploadGroupId || !projetoAtual) return;
             const gid = vectorUploadGroupId;
+            const fd = new FormData();
             for (let i = 0; i < files.length; i++) {
-                const fd = new FormData();
                 fd.append('file', files[i]);
-                await fetch(`/api/vector/${projetoAtual}/groups/${gid}/upload`, { method: 'POST', body: fd });
             }
+            await fetch(`/api/vector/${projetoAtual}/groups/${gid}/upload`, { method: 'POST', body: fd });
             loadVectorGroups();
             document.getElementById('vector-upload-input').value = '';
         }

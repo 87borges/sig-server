@@ -333,15 +333,27 @@ def delete_vector_group(project, gid):
 @app.route('/api/vector/<project>/groups/<gid>/upload', methods=['POST'])
 def upload_vector(project, gid):
     import json, uuid
-    if 'file' not in request.files:
+    files = request.files.getlist('file')
+    if not files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
-    f = request.files['file']
-    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-    if ext not in ('shp', 'shx', 'dbf', 'prj', 'kml', 'kmz', 'gpkg', 'zip'):
-        return jsonify({'error': 'Tipo não permitido'}), 400
     vid = str(uuid.uuid4())[:8]
-    fname = f'{vid}_{secure_filename(f.filename)}'
-    f.save(os.path.join(VECTOR_DIR, fname))
+    vector_name = ''
+    main_type = ''
+    # Determine name from first recognized file
+    for f in files:
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        if ext in ('shp', 'kml', 'kmz', 'gpkg', 'zip'):
+            vector_name = f.filename.rsplit('.', 1)[0]
+            main_type = ext
+            break
+    if not vector_name:
+        vector_name = files[0].filename.rsplit('.', 1)[0]
+    # Save all files
+    for f in files:
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        fname = f'{vid}_{secure_filename(f.filename)}'
+        f.save(os.path.join(VECTOR_DIR, fname))
+    # Update metadata
     meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
     groups = []
     if os.path.isfile(meta_path):
@@ -349,11 +361,11 @@ def upload_vector(project, gid):
             groups = json.load(mf)
     for g in groups:
         if g['id'] == gid:
-            g.setdefault('vectors', []).append({'id': vid, 'name': f.filename.rsplit('.', 1)[0], 'filename': fname, 'type': ext})
+            g.setdefault('vectors', []).append({'id': vid, 'name': vector_name, 'type': main_type})
             break
     with open(meta_path, 'w') as mf:
         json.dump(groups, mf)
-    return jsonify({'success': True, 'id': vid, 'name': f.filename.rsplit('.', 1)[0], 'filename': fname, 'type': ext})
+    return jsonify({'success': True, 'id': vid, 'name': vector_name, 'type': main_type})
 
 @app.route('/api/vector/<project>/groups/<gid>/vector/<vid>', methods=['DELETE'])
 def delete_vector(project, gid, vid):
@@ -382,36 +394,50 @@ def get_vector_file(project, filename):
         return send_from_directory(VECTOR_DIR, secure_filename(filename))
     return jsonify({'error': 'Arquivo não encontrado'}), 404
 
+@app.route('/api/vector/<project>/files/<vid>', methods=['GET'])
+def get_vector_files_list(project, vid):
+    """List all files for a vector"""
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    return jsonify({'files': files})
+
 @app.route('/api/vector/<project>/geojson/<vid>', methods=['GET'])
 def get_vector_geojson(project, vid):
     """Convert shapefile/gpkg to GeoJSON using ogr2ogr"""
-    import subprocess, json
-    # Find all files for this vector
+    import subprocess, json, zipfile, tempfile
     files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
     if not files:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
-    # Find main file
     main_file = None
+    # Check for zip first
     for f in files:
-        ext = f.rsplit('.', 1)[-1].lower()
-        if ext in ('shp', 'gpkg'):
+        if f.endswith('.zip'):
             main_file = os.path.join(VECTOR_DIR, f)
             break
     if not main_file:
-        # Maybe it's a zip or kml already processed
         for f in files:
             ext = f.rsplit('.', 1)[-1].lower()
-            if ext in ('kml', 'geojson'):
+            if ext in ('shp', 'gpkg', 'kml', 'geojson'):
                 main_file = os.path.join(VECTOR_DIR, f)
                 break
     if not main_file:
-        return jsonify({'error': 'Formato não suportado para conversão'}), 400
+        return jsonify({'error': 'Formato não suportado'}), 400
     try:
+        # If zip, extract to temp dir first
+        if main_file.endswith('.zip'):
+            tmpdir = tempfile.mkdtemp()
+            with zipfile.ZipFile(main_file, 'r') as z:
+                z.extractall(tmpdir)
+            # Find shp or gpkg inside
+            for f in os.listdir(tmpdir):
+                ext = f.rsplit('.', 1)[-1].lower()
+                if ext in ('shp', 'gpkg', 'kml'):
+                    main_file = os.path.join(tmpdir, f)
+                    break
         r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '/vsistdout/', main_file],
-                          capture_output=True, text=True, timeout=30)
+                          capture_output=True, text=True, timeout=60)
         if r.returncode == 0 and r.stdout:
             return (r.stdout, 200, {'Content-Type': 'application/geo+json'})
-        return jsonify({'error': f'Conversão falhou: {r.stderr[:200]}'}), 500
+        return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
