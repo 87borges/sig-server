@@ -95,24 +95,51 @@ def upload_raster():
     if 'file' not in request.files:
         return jsonify({'error': 'Nenhum arquivo'}), 400
     f = request.files['file']
-    if not f.filename.lower().endswith(('.tif', '.tiff', '.png', '.jpg', '.jpeg')):
-        return jsonify({'error': 'Apenas .tif, .png ou .jpg'}), 400
+    if not f.filename.lower().endswith(('.tif', '.tiff')):
+        return jsonify({'error': 'Apenas .tif'}), 400
     project = request.form.get('project', 'default')
+    # Remove old rasters for this project
+    import shutil
     for old in os.listdir(RASTER_DIR):
-        if old.startswith(f'{project}_raster.'):
-            os.remove(os.path.join(RASTER_DIR, old))
-    ext = f.filename.rsplit('.', 1)[1].lower()
-    filename = f'{project}_raster.{ext}'
-    f.save(os.path.join(RASTER_DIR, filename))
-    return jsonify({'success': True, 'filename': filename})
+        if old.startswith(f'{project}_'):
+            p = os.path.join(RASTER_DIR, old)
+            if os.path.isdir(p): shutil.rmtree(p)
+            else: os.remove(p)
+    filename = f'{project}_raster.tif'
+    src = os.path.join(RASTER_DIR, filename)
+    f.save(src)
+    # Generate tiles with gdal2tiles
+    try:
+        import subprocess
+        tiles_dir = os.path.join(RASTER_DIR, f'{project}_tiles')
+        os.makedirs(tiles_dir, exist_ok=True)
+        subprocess.run(['gdal2tiles.py', '-z', '5-19', '--webviewer=none', '--resume',
+                       '--processes', '2', src, tiles_dir],
+                      capture_output=True, timeout=180)
+        has_tiles = os.path.exists(os.path.join(tiles_dir, '5'))
+        if has_tiles:
+            # Get bounds from raster
+            from osgeo import gdal
+            ds = gdal.Open(src)
+            if ds:
+                gt = ds.GetGeoTransform()
+                x_size, y_size = ds.RasterXSize, ds.RasterYSize
+                bounds = [gt[3] + y_size * gt[5], gt[0], gt[3], gt[0] + x_size * gt[1]]
+                ds = None
+            else:
+                bounds = None
+            return jsonify({'success': True, 'filename': filename, 'has_tiles': True, 'bounds': bounds})
+        return jsonify({'success': True, 'filename': filename, 'has_tiles': False, 'note': 'Falha ao gerar tiles'})
+    except Exception as e:
+        return jsonify({'success': True, 'filename': filename, 'has_tiles': False, 'note': str(e)})
 
-@app.route('/api/raster/<project>', methods=['GET'])
-def get_raster(project):
-    for ext in ['tif', 'tiff', 'png', 'jpg', 'jpeg']:
-        path = os.path.join(RASTER_DIR, f'{project}_raster.{ext}')
-        if os.path.isfile(path):
-            return send_from_directory(RASTER_DIR, f'{project}_raster.{ext}')
-    return jsonify({'error': 'Raster não encontrado'}), 404
+@app.route('/api/raster-tiles/<project>/<int:z>/<int:x>/<int:y>.png', methods=['GET'])
+def raster_tile(project, z, x, y):
+    tiles_dir = os.path.join(RASTER_DIR, f'{project}_tiles', str(z), str(x))
+    tile_path = os.path.join(tiles_dir, f'{y}.png')
+    if os.path.isfile(tile_path):
+        return send_from_directory(tiles_dir, f'{y}.png', mimetype='image/png')
+    return ('', 204)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
