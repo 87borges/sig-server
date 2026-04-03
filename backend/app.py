@@ -512,29 +512,54 @@ def upload_vector(project, gid):
 
 @app.route('/api/vector/<project>/geojson/<vid>/columns', methods=['GET'])
 def get_vector_columns(project, vid):
-    """Read GeoJSON and return available property columns with unique values."""
-    import json, glob
-    # Find geojson file
-    matches = glob.glob(os.path.join(VECTOR_DIR, f'{vid}_*.geojson'))
-    if not matches:
-        matches = glob.glob(os.path.join(VECTOR_DIR, f'{vid}_*.json'))
-    if not matches:
-        return jsonify({'error': 'GeoJSON não encontrado'}), 404
-    with open(matches[0]) as f:
-        gj = json.load(f)
-    columns = {}
-    for feat in gj.get('features', []):
-        props = feat.get('properties', {})
-        for k, v in props.items():
-            if v is None or isinstance(v, (dict, list)):
-                continue
-            if k not in columns:
-                columns[k] = set()
-            columns[k].add(str(v))
-    result = []
-    for k, vals in columns.items():
-        result.append({'name': k, 'values': sorted(vals), 'count': len(vals)})
-    return jsonify({'columns': result})
+    """Convert vector to GeoJSON on-the-fly and return property columns with unique values."""
+    import json, subprocess, zipfile, tempfile
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    if not files:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    main_file = None
+    for f in files:
+        if f.endswith('.zip'):
+            main_file = os.path.join(VECTOR_DIR, f)
+            break
+    if not main_file:
+        for f in files:
+            ext = f.rsplit('.', 1)[-1].lower()
+            if ext in ('shp', 'gpkg', 'kml', 'geojson'):
+                main_file = os.path.join(VECTOR_DIR, f)
+                break
+    if not main_file:
+        return jsonify({'error': 'Formato não suportado'}), 400
+    try:
+        if main_file.endswith('.zip'):
+            tmpdir = tempfile.mkdtemp()
+            with zipfile.ZipFile(main_file, 'r') as z:
+                z.extractall(tmpdir)
+            for f in os.listdir(tmpdir):
+                ext = f.rsplit('.', 1)[-1].lower()
+                if ext in ('shp', 'gpkg', 'kml'):
+                    main_file = os.path.join(tmpdir, f)
+                    break
+        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file],
+                          capture_output=True, text=True, timeout=60)
+        if r.returncode != 0 or not r.stdout:
+            return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500
+        gj = json.loads(r.stdout)
+        columns = {}
+        for feat in gj.get('features', []):
+            props = feat.get('properties', {})
+            for k, v in props.items():
+                if v is None or isinstance(v, (dict, list)):
+                    continue
+                if k not in columns:
+                    columns[k] = set()
+                columns[k].add(str(v))
+        result = []
+        for k, vals in columns.items():
+            result.append({'name': k, 'values': sorted(vals), 'count': len(vals)})
+        return jsonify({'columns': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/vector/<project>/groups/<gid>/vector/<vid>', methods=['DELETE'])
 def delete_vector(project, gid, vid):
