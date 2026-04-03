@@ -524,11 +524,15 @@ def upload_vector(project, gid):
                     gpkg_entries = []
                     for layer_name in gpkg_layers:
                         layer_vid = str(uuid.uuid4())[:8]
+                        layer_display = layer_name if layer_name else name
                         out_dir = tempfile.mkdtemp()
                         out_shp = os.path.join(out_dir, f'{layer_vid}.shp')
                         cmd = ['ogr2ogr', '-f', 'ESRI Shapefile', out_shp, gpkg_path]
                         if layer_name:
                             cmd.append(layer_name)
+                            # Sanitize layer name for shapefile (no spaces)
+                            safe_name = layer_name.replace(' ', '_').replace('-', '_')
+                            cmd.extend(['-nln', safe_name])
                         cr = sp.run(cmd, capture_output=True, text=True, timeout=60)
                         app.logger.info(f'GPKG convert {layer_name}: rc={cr.returncode} shp_exists={os.path.exists(out_shp)} stderr={cr.stderr[:300]}')
                         if cr.returncode != 0 or not os.path.exists(out_shp):
