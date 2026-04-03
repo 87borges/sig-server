@@ -1392,25 +1392,16 @@
             const catKey = `${vid}_${catIndex}`;
             const wasVisible = vectorCategoryVisibility[catKey] !== false;
             vectorCategoryVisibility[catKey] = !wasVisible;
-            // Update layer visibility for this category's features
-            if (vectorLayers[vid]) {
-                vectorLayers[vid].eachLayer(layer => {
-                    if (layer.feature?.properties) {
-                        const group = vectorGroups.find(g => g.vectors?.some(v => v.id === vid));
-                        const vec = group?.vectors.find(v => v.id === vid);
-                        if (vec?.categories?.[catIndex]) {
-                            const catVal = vec.categories[catIndex].value;
-                            const featVal = String(layer.feature.properties[vec.categorizeColumn] || '');
-                            if (featVal === catVal) {
-                                if (wasVisible) {
-                                    vectorLayers[vid].removeLayer(layer);
-                                } else {
-                                    vectorLayers[vid].addLayer(layer);
-                                }
-                            }
-                        }
-                    }
-                });
+            // Force layer re-render to apply visibility change
+            if (vectorLayers[vid]) { map.removeLayer(vectorLayers[vid]); delete vectorLayers[vid]; }
+            // Find group/vec to call toggleVector with forceShow
+            for (const g of vectorGroups) {
+                const vec = g.vectors?.find(v => v.id === vid);
+                if (vec) {
+                    vectorVisibility[vid] = true;
+                    toggleVector(g.id, vid, true);
+                    break;
+                }
             }
             renderVectorMenu();
         }
