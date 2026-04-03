@@ -611,14 +611,15 @@ def download_vector(project, vid):
                     break
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # If GPKG layer, convert only this layer to GeoJSON
+        # If GPKG layer, convert only this layer to shapefile
         if gpkg_file and gpkg_layer:
             tmpdir = tempfile.mkdtemp()
-            out_geojson = os.path.join(tmpdir, f'{vec_name}.geojson')
-            cmd = ['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', out_geojson, gpkg_file, gpkg_layer]
+            out_shp = os.path.join(tmpdir, f'{vec_name}.shp')
+            cmd = ['ogr2ogr', '-f', 'ESRI Shapefile', '-t_srs', 'EPSG:4326', '-nln', vec_name.replace(' ', '_'), out_shp, gpkg_file, gpkg_layer]
             cr = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            if cr.returncode == 0 and os.path.exists(out_geojson):
-                zf.write(out_geojson, f'{vec_name}.geojson')
+            if cr.returncode == 0 and os.path.exists(out_shp):
+                for ff in os.listdir(tmpdir):
+                    zf.write(os.path.join(tmpdir, ff), ff)
             import shutil
             shutil.rmtree(tmpdir, ignore_errors=True)
         else:
@@ -646,12 +647,24 @@ def download_vector_group(project, gid):
     buf = io.BytesIO()
     group_name = secure_filename(group.get('name', gid))
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        # Collect GPKG files to include (one per gpkg_vid)
+        gpkg_included = set()
         for vec in group.get('vectors', []):
-            files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{vec['id']}_")]
-            vec_name = secure_filename(vec.get('name', vec['id']))
-            for f in files:
-                clean_name = f[len(vec['id'])+1:]
-                zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{vec_name}/{clean_name}")
+            if vec.get('gpkg_vid'):
+                gpkg_vid = vec['gpkg_vid']
+                if gpkg_vid not in gpkg_included:
+                    gpkg_included.add(gpkg_vid)
+                    gpkg_files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{gpkg_vid}_")]
+                    gpkg_name = secure_filename(vec.get('name', gpkg_vid).rsplit('_', 1)[0])  # Remove layer suffix
+                    for f in gpkg_files:
+                        clean_name = f[len(gpkg_vid)+1:]
+                        zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{gpkg_name}/{clean_name}")
+            else:
+                files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{vec['id']}_")]
+                vec_name = secure_filename(vec.get('name', vec['id']))
+                for f in files:
+                    clean_name = f[len(vec['id'])+1:]
+                    zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{vec_name}/{clean_name}")
     buf.seek(0)
     return (buf.getvalue(), 200, {
         'Content-Type': 'application/zip',
