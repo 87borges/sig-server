@@ -510,16 +510,16 @@ def upload_vector(project, gid):
                 r = sp.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
                 print(f'ogrinfo for {name}: rc={r.returncode}, stderr={r.stderr[:200]}, stdout_lines={len(r.stdout.split(chr(10)))}')
                 if r.returncode == 0:
+                    import re
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
                         stripped = line.strip()
-                        if stripped.startswith('1:') or stripped.startswith('2:') or stripped.startswith('3:'):
-                            # Format: "1: layer_name (Geometry type)"
-                            parts = stripped.split(' ', 1)
-                            if len(parts) >= 2:
-                                layer_name = parts[1].strip().split(' ')[0].strip('(').strip()
-                                if layer_name and layer_name not in gpkg_layers:
-                                    gpkg_layers.append(layer_name)
+                        # Match ogrinfo layer lines: "1: layer_name (Geometry type)"
+                        m = re.match(r'^(\d+):\s+(\S+)', stripped)
+                        if m:
+                            layer_name = m.group(2).strip('(')
+                            if layer_name and layer_name not in gpkg_layers:
+                                gpkg_layers.append(layer_name)
                     print(f'GPKG layers detected: {gpkg_layers}')
                     if len(gpkg_layers) > 1:
                         for layer_name in gpkg_layers:
@@ -544,6 +544,15 @@ def upload_vector(project, gid):
                         continue
             except Exception as e:
                 print(f'GPKG layer detection error: {e}')
+            # GPKG detected but layers unknown — add as single vector (ogr2ogr will use first layer)
+            for g in groups:
+                if g['id'] == gid:
+                    g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg'})
+                    break
+            results.append({'id': vid, 'name': name, 'type': 'gpkg'})
+            with open(meta_path, 'w') as mf:
+                json.dump(groups, mf)
+            continue
 
         for g in groups:
             if g['id'] == gid:
@@ -807,9 +816,11 @@ def list_gpkg_layers(project, vid):
             return jsonify({'layers': [], 'is_gpkg': False})
         # Parse layer names from ogrinfo output
         layers = []
+        import re
         for line in r.stdout.split('\n'):
-            if line.strip().startswith('1:'):
-                layer_name = line.strip().split(' ', 1)[1].strip().split(' ')[0]
+            m = re.match(r'^(\d+):\s+(\S+)', line.strip())
+            if m:
+                layer_name = m.group(2).strip('(')
                 if layer_name: layers.append(layer_name)
         return jsonify({'layers': layers, 'is_gpkg': True})
     except:
