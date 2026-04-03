@@ -1029,7 +1029,18 @@
             });
         }
 
-        function zoomToVector(vid) {
+        async function zoomToVector(vid) {
+            // If not loaded yet, find and load it first
+            if (!vectorLayers[vid]) {
+                for (const g of vectorGroups) {
+                    const vec = g.vectors?.find(v => v.id === vid);
+                    if (vec) {
+                        vectorVisibility[vid] = undefined;
+                        await toggleVector(g.id, vid, true);
+                        break;
+                    }
+                }
+            }
             if (vectorLayers[vid]) {
                 try {
                     const bounds = vectorLayers[vid].getBounds();
