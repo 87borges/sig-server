@@ -207,12 +207,12 @@
                             <div style="margin-bottom:14px">
                                 <div style="font-size:0.8em;font-weight:600;margin-bottom:6px" id="ve-color-label">Cor</div>
                                 <div style="display:flex;gap:8px;align-items:center">
-                                    <input type="color" id="ve-color-picker" value="#e74c3c" style="width:40px;height:40px;border:none;cursor:pointer;border-radius:6px;padding:0">
+                                    <input type="color" id="ve-color-picker" value="#ffffff" style="width:40px;height:40px;border:none;cursor:pointer;border-radius:6px;padding:0">
                                     <div id="ve-color-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;flex:1"></div>
                                 </div>
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
                                     <span style="font-size:0.75em;color:#888">HEX:</span>
-                                    <input type="text" id="ve-color-hex" value="#e74c3c" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                    <input type="text" id="ve-color-hex" value="#ffffff" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
                                 </div>
                             </div>
                             <!-- Transparência -->
@@ -223,7 +223,7 @@
                                 </div>
                                 <div style="position:relative;height:16px;background:repeating-conic-gradient(#ccc 0% 25%,white 0% 50%) 50%/10px 10px;border-radius:8px;overflow:hidden;border:1px solid #ddd">
                                     <div id="ve-opacity-fill" style="position:absolute;inset:0;background:#e74c3c;border-radius:8px"></div>
-                                    <input type="range" id="ve-opacity" min="0" max="100" value="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
+                                    <input type="range" id="ve-opacity" min="0" max="100" value="50" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
                                 </div>
                             </div>
                             <!-- Espessura (linhas/polígonos) -->
@@ -886,7 +886,7 @@
                 if (!collapsed) {
                     g.vectors.forEach((v, vi) => {
                         const vis = isVectorVisible(g.id, v.id);
-                        const color = v.color || '#e74c3c';
+                        const color = v.color || '#ffffff';
                         const vtype = v._detectedType || 'polygon';
                         const hasCat = v.categorized && v.categories && v.categories.length > 0;
                         const catCollapsed = vectorCategoryCollapsed[v.id];
@@ -1313,9 +1313,9 @@
                                 };
                             } else {
                                 // Single style (original)
-                                const color = vec.color || '#e74c3c';
-                                const opacity = vec.opacity ?? 0.6;
-                                const weight = vec.weight ?? 0;
+                                const color = vec.color || '#ffffff';
+                                const opacity = vec.opacity ?? 0.5;
+                                const weight = vec.weight ?? 2;
                                 const strokeColor = vec.strokeColor || '#333333';
                                 const strokeOpacity = vec.strokeOpacity ?? 1;
                                 const marker = vec.marker || '●';
@@ -1489,7 +1489,7 @@
             if (!vec) return;
             // Use vector's current style as base for categories
             catCategories.forEach(c => {
-                c.opacity = vec.opacity ?? 0.6;
+                c.opacity = vec.opacity ?? 0.5;
                 c.weight = vec.weight ?? 2;
                 c.strokeColor = vec.strokeColor || '#333333';
                 c.marker = vec.marker || '●';
@@ -1571,7 +1571,7 @@
             document.getElementById('ve-type').textContent = `Categoria — Tipo: ` + (typeLabels[vtype]||vtype);
 
             // Color
-            const color = cat.color || '#e74c3c';
+            const color = cat.color || '#ffffff';
             document.getElementById('ve-color-picker').value = color;
             document.getElementById('ve-color-hex').value = color;
             const grid = document.getElementById('ve-color-grid');
@@ -1704,7 +1704,7 @@
             document.getElementById('ve-type').textContent = 'Tipo: ' + (typeLabels[vtype]||vtype);
 
             // Color
-            const color = vec.color || '#e74c3c';
+            const color = vec.color || '#ffffff';
             document.getElementById('ve-color-picker').value = color;
             document.getElementById('ve-color-hex').value = color;
             const grid = document.getElementById('ve-color-grid');
