@@ -1422,7 +1422,6 @@
             const div = document.getElementById('cat-categories');
             div.innerHTML = '';
             if (!catCategories) return;
-            // Detect vector type
             let vtype = 'polygon';
             for (const g of vectorGroups) {
                 const vec = g?.vectors?.find(v => v.id === catVid);
@@ -1433,18 +1432,20 @@
                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;transition:background 0.1s';
                 row.onmouseenter = () => row.style.background = '#f5f5f5';
                 row.onmouseleave = () => row.style.background = 'transparent';
+                // Hidden native picker, triggered by preview click
+                const pickerId = `catpicker_${i}`;
                 let preview = '';
                 if (vtype === 'line') {
-                    preview = `<span style="display:inline-block;width:28px;height:3px;background:${cat.color};border-radius:1px"></span>`;
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="display:inline-block;width:28px;height:3px;background:${cat.color};border-radius:1px;cursor:pointer" title="Editar cor"></span>`;
                 } else if (vtype === 'point') {
                     const m = cat.marker || '●';
-                    preview = `<span style="font-size:20px;color:${cat.color}">${m}</span>`;
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="font-size:20px;color:${cat.color};cursor:pointer" title="Editar cor">${m}</span>`;
                 } else {
-                    preview = `<span style="display:inline-block;width:22px;height:16px;background:${cat.color};border-radius:3px"></span>`;
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="display:inline-block;width:22px;height:16px;background:${cat.color};border-radius:3px;cursor:pointer" title="Editar cor"></span>`;
                 }
                 row.innerHTML = `
                     ${preview}
-                    <input type="color" value="${cat.color}" style="width:28px;height:28px;border:none;cursor:pointer;border-radius:4px;padding:0" onchange="catCategories[${i}].color=this.value;renderCatCategories()">
+                    <input type="color" id="${pickerId}" value="${cat.color}" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="catCategories[${i}].color=this.value;renderCatCategories()">
                     <span style="flex:1;font-size:0.85em">${cat.value}</span>
                 `;
                 div.appendChild(row);
