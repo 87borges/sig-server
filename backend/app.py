@@ -501,6 +501,33 @@ def upload_vector(project, gid):
             name = name.rsplit('.', 1)[0] if '.' in name else name
         fname = f'{vid}_{secure_filename(f.filename)}'
         f.save(os.path.join(VECTOR_DIR, fname))
+
+        # For GeoPackage: detect layers and create one vector per layer
+        if ext == 'gpkg':
+            import subprocess
+            gpkg_path = os.path.join(VECTOR_DIR, fname)
+            try:
+                r = subprocess.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
+                if r.returncode == 0:
+                    gpkg_layers = []
+                    for line in r.stdout.split('\n'):
+                        if line.strip().startswith('1:'):
+                            layer_name = line.strip().split(' ', 1)[1].strip().split(' ')[0]
+                            if layer_name: gpkg_layers.append(layer_name)
+                    if len(gpkg_layers) > 1:
+                        for layer_name in gpkg_layers:
+                            vec_entry = {'id': vid, 'name': f"{name}_{layer_name}", 'type': 'gpkg', 'gpkg_layer': layer_name, 'gpkg_vid': vid}
+                            for g in groups:
+                                if g['id'] == gid:
+                                    g.setdefault('vectors', []).append(vec_entry)
+                                    break
+                            results.append(vec_entry)
+                        with open(meta_path, 'w') as mf:
+                            json.dump(groups, mf)
+                        continue
+            except:
+                pass
+
         for g in groups:
             if g['id'] == gid:
                 g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': ext})
@@ -600,6 +627,11 @@ def get_vector_columns(project, vid):
                     break
         r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file],
                           capture_output=True, text=True, timeout=60)
+        # For GPKG, support layer param
+        layer_name = request.args.get('layer')
+        if layer_name and main_file.endswith('.gpkg'):
+            r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file, layer_name],
+                              capture_output=True, text=True, timeout=60)
         if r.returncode != 0 or not r.stdout:
             return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500
         gj = json.loads(r.stdout)
@@ -724,14 +756,46 @@ def get_vector_geojson(project, vid):
                 if ext in ('shp', 'gpkg', 'kml'):
                     main_file = os.path.join(tmpdir, f)
                     break
-        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file],
-                          capture_output=True, text=True, timeout=60)
+        # For GeoPackage, support layer selection via query param
+        ogr_cmd = ['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file]
+        if main_file.endswith('.gpkg'):
+            layer_name = request.args.get('layer')
+            if layer_name:
+                ogr_cmd = ['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file, layer_name]
+        r = subprocess.run(ogr_cmd, capture_output=True, text=True, timeout=60)
         print(f'ogr2ogr for {vid}: returncode={r.returncode}, stdout_len={len(r.stdout)}, stderr={r.stderr[:200]}')
         if r.returncode == 0 and r.stdout:
             return (r.stdout, 200, {'Content-Type': 'application/geo+json'})
         return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/vector/<project>/geojson/<vid>/layers', methods=['GET'])
+def list_gpkg_layers(project, vid):
+    """List layers inside a GeoPackage file."""
+    import subprocess, json
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    main_file = None
+    for f in files:
+        ext = f.rsplit('.', 1)[-1].lower()
+        if ext == 'gpkg':
+            main_file = os.path.join(VECTOR_DIR, f)
+            break
+    if not main_file:
+        return jsonify({'layers': [], 'is_gpkg': False})
+    try:
+        r = subprocess.run(['ogrinfo', main_file], capture_output=True, text=True, timeout=30)
+        if r.returncode != 0:
+            return jsonify({'layers': [], 'is_gpkg': False})
+        # Parse layer names from ogrinfo output
+        layers = []
+        for line in r.stdout.split('\n'):
+            if line.strip().startswith('1:'):
+                layer_name = line.strip().split(' ', 1)[1].strip().split(' ')[0]
+                if layer_name: layers.append(layer_name)
+        return jsonify({'layers': layers, 'is_gpkg': True})
+    except:
+        return jsonify({'layers': [], 'is_gpkg': False})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

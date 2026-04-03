@@ -1215,7 +1215,8 @@
                                 const kf = ld.files.find(f => f.endsWith('.kml') || f.endsWith('.kmz'));
                                 if (kf) { const r = await fetch(`/api/vector/${projetoAtual}/file/${kf}`); const t = await r.text(); gj = toGeoJSON.kml(new DOMParser().parseFromString(t,'text/xml')); }
                             } else {
-                                const r = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}`);
+                                const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                                const r = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}${layerParam}`);
                                 if (r.ok) gj = await r.json();
                             }
                             if (gj?.features?.[0]?.geometry?.type) {
@@ -1241,7 +1242,8 @@
                             geojson = toGeoJSON.kml(doc);
                             console.log('GeoJSON from KML:', JSON.stringify(geojson).substring(0, 300));
                         } else {
-                            const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}`);
+                            const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                            const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}${layerParam}`);
                             console.log('GeoJSON response status:', resp.status);
                             if (resp.ok) {
                                 const text = await resp.text();
@@ -1397,7 +1399,8 @@
             document.getElementById('cat-result').style.display = 'none';
             document.getElementById('categorize-modal').style.display = 'flex';
             try {
-                const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}/columns`);
+                const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}/columns${layerParam}`);
                 if (!resp.ok) throw new Error('Erro ao ler atributos');
                 const data = await resp.json();
                 document.getElementById('cat-loading').style.display = 'none';
