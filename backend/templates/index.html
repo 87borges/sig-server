@@ -586,7 +586,8 @@
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 12px;font-weight:600;font-size:0.72em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.4;flex-shrink:0;user-select:none">⠿</span>
-                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllRasters('${g.id}')"><span class="slider"></span></label></span>
+                    <span style="flex-shrink:0;font-size:0.85em">🗄️</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark" title="${groupVis?'Desativar grupo':'Ativar grupo'}"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllRasters('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleRasterGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
                     <span ondblclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" onclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptRasterUpload('${g.id}')" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Adicionar raster">➕</span>
@@ -867,7 +868,8 @@
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllVectors('${g.id}')"><span class="slider"></span></label></span>
+                    <span style="flex-shrink:0;font-size:0.85em">🗄️</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark" title="${groupVis?'Desativar grupo':'Ativar grupo'}"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllVectors('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleVectorGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
                     <span id="vgname_${g.id}" ondblclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" onclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
