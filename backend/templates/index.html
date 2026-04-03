@@ -1446,12 +1446,15 @@
 
         function selectCatColumn(colName, values) {
             catColumn = colName;
+            const vec = vectorGroups.flatMap(g=>g.vectors).find(v=>v.id===vid);
+            const vtype = vec ? (vec._detectedType || 'polygon') : 'polygon';
             catCategories = values.map((v, i) => ({
                 value: v,
-                color: CAT_PALETTE[i % CAT_PALETTE.length],
-                opacity: 0.6,
+                color: '#ffffff',
+                opacity: 0.5,
                 weight: 2,
                 strokeColor: '#333333',
+                strokeOpacity: 1,
                 marker: '●',
                 markerSize: 16
             }));
@@ -1505,6 +1508,7 @@
                 c.opacity = vec.opacity ?? 0.5;
                 c.weight = vec.weight ?? 2;
                 c.strokeColor = vec.strokeColor || '#333333';
+                c.strokeOpacity = vec.strokeOpacity ?? 1;
                 c.marker = vec.marker || '●';
                 c.markerSize = vec.markerSize || 16;
             });
