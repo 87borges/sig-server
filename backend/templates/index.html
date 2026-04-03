@@ -956,7 +956,7 @@
                                 subrow.innerHTML = `
                                     <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${catVis?'checked':''} onchange="toggleVectorCategory('${v.id}',${ci})"><span class="slider"></span></label></span>
                                     ${catLegend}
-                                    <span style="flex:1;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
+                                    <span style="flex:1;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
                                     <span onclick="zoomToVectorCategory('${v.id}',${ci})" style="cursor:pointer;opacity:0.4;font-size:0.7em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                                 `;
                                 gdiv.appendChild(subrow);
