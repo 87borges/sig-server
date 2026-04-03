@@ -619,6 +619,7 @@
                             <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
                             <span ondblclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" onclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" style="flex:1;cursor:text;font-size:0.78em;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
                             <span onclick="deleteRasterFromGroup('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Excluir raster">🗑️</span>
+                            <span onclick="zoomToRaster('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                         `;
                         gdiv.appendChild(row);
                     });
@@ -935,6 +936,7 @@
                             <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
                             <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
+                            <span onclick="zoomToVector('${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                             <span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Categorizar por atributo">🏷️</span>
                         `;
                         gdiv.appendChild(row);
@@ -1025,6 +1027,27 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
                 }).then(r => r.json()).then(() => loadVectorGroups());
             });
+        }
+
+        function zoomToVector(vid) {
+            if (vectorLayers[vid]) {
+                try {
+                    const bounds = vectorLayers[vid].getBounds();
+                    if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+                } catch(e) {}
+            }
+        }
+
+        function zoomToRaster(gid, rid) {
+            for (const g of rasterGroups) {
+                if (g.id === gid) {
+                    const r = g.rasters?.find(x => x.id === rid);
+                    if (r?.bounds) {
+                        map.fitBounds(r.bounds, { padding: [50, 50], maxZoom: 17 });
+                    }
+                    break;
+                }
+            }
         }
 
         function deleteVector(gid, vid) {
