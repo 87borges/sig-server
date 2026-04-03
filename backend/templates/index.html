@@ -1422,12 +1422,28 @@
             const div = document.getElementById('cat-categories');
             div.innerHTML = '';
             if (!catCategories) return;
+            // Detect vector type
+            let vtype = 'polygon';
+            for (const g of vectorGroups) {
+                const vec = g?.vectors?.find(v => v.id === catVid);
+                if (vec) { vtype = vec._detectedType || 'polygon'; break; }
+            }
             catCategories.forEach((cat, i) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;transition:background 0.1s';
                 row.onmouseenter = () => row.style.background = '#f5f5f5';
                 row.onmouseleave = () => row.style.background = 'transparent';
+                let preview = '';
+                if (vtype === 'line') {
+                    preview = `<span style="display:inline-block;width:28px;height:3px;background:${cat.color};border-radius:1px"></span>`;
+                } else if (vtype === 'point') {
+                    const m = cat.marker || '●';
+                    preview = `<span style="font-size:20px;color:${cat.color}">${m}</span>`;
+                } else {
+                    preview = `<span style="display:inline-block;width:22px;height:16px;background:${cat.color};border-radius:3px"></span>`;
+                }
                 row.innerHTML = `
+                    ${preview}
                     <input type="color" value="${cat.color}" style="width:28px;height:28px;border:none;cursor:pointer;border-radius:4px;padding:0" onchange="catCategories[${i}].color=this.value;renderCatCategories()">
                     <span style="flex:1;font-size:0.85em">${cat.value}</span>
                 `;
