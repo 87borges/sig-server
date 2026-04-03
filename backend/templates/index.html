@@ -919,11 +919,16 @@
                             if (vtype === 'point') {
                                 const m = v.marker || '●'; const ms = v.markerSize || 16;
                                 legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
+                            } else if (vtype === 'point') {
+                                const op = v.opacity ?? 0.5;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color};opacity:${op}">${m}</span>`;
                             } else if (vtype === 'line') {
-                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                                const op = v.opacity ?? 0.5;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};opacity:${op};border-radius:1px;vertical-align:middle"></span>`;
                             } else {
                                 const sc = v.strokeColor || '#333333'; const w = Math.min(v.weight||2, 3);
-                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                                const op = v.opacity ?? 0.5;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};opacity:${op};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
                             }
                         }
 
@@ -952,13 +957,16 @@
                                 let catLegend = '';
                                 if (vtype === 'point') {
                                     const m = cat.marker || v.marker || '●';
-                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:${Math.min(cat.markerSize||v.markerSize||16,14)}px;color:${cat.color}">${m}</span>`;
+                                    const cop = cat.opacity ?? v.opacity ?? 0.6;
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:${Math.min(cat.markerSize||v.markerSize||16,14)}px;color:${cat.color};opacity:${cop}">${m}</span>`;
                                 } else if (vtype === 'line') {
-                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:14px;height:3px;background:${cat.color};border-radius:1px;vertical-align:middle"></span>`;
+                                    const cop = cat.opacity ?? v.opacity ?? 0.6;
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:14px;height:3px;background:${cat.color};opacity:${cop};border-radius:1px;vertical-align:middle"></span>`;
                                 } else {
                                     const sc = cat.strokeColor || v.strokeColor || '#333333';
                                     const w = Math.min(cat.weight || v.weight || 2, 3);
-                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:12px;height:10px;background:${cat.color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                                    const cop = cat.opacity ?? v.opacity ?? 0.6;
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:12px;height:10px;background:${cat.color};opacity:${cop};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
                                 }
 
                                 subrow.innerHTML = `
