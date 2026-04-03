@@ -233,6 +233,7 @@
                                     <span id="ve-weight-val">2px</span>
                                 </div>
                                 <input type="range" id="ve-weight" min="0" max="20" value="2" style="width:100%;accent-color:#333;cursor:pointer">
+                                <div style="font-size:0.7em;color:#666;margin-top:2px">0 = sem contorno</div>
                             </div>
                             <!-- Cor do contorno (polígonos) -->
                             <div id="ve-stroke-section" style="margin-bottom:14px;display:none">
@@ -244,6 +245,11 @@
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
                                     <span style="font-size:0.75em;color:#888">HEX:</span>
                                     <input type="text" id="ve-stroke-hex" value="#333333" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                </div>
+                                <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                                    <span style="font-size:0.75em;color:#888;white-space:nowrap">Transparência:</span>
+                                    <input type="range" id="ve-stroke-opacity" min="0" max="100" value="100" style="flex:1;accent-color:#333;cursor:pointer">
+                                    <span id="ve-stroke-opacity-val" style="font-size:0.8em;min-width:30px">100%</span>
                                 </div>
                             </div>
                             <!-- Marcadores (pontos) -->
@@ -1265,7 +1271,7 @@
                             if (hasCategories) {
                                 // Categorized style: each category has full style properties
                                 const catMap = {};
-                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, marker: c.marker, markerSize: c.markerSize, index: ci });
+                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, strokeOpacity: c.strokeOpacity, marker: c.marker, markerSize: c.markerSize, index: ci });
                                 const isPoint = vec._detectedType === 'point';
                                 const isLine = vec._detectedType === 'line';
 
@@ -1277,7 +1283,8 @@
                                         if (isPoint) return { opacity: cat.opacity ?? 0.6 };
                                         return {
                                             color: isLine ? cat.color : (cat.strokeColor || '#333333'),
-                                            weight: cat.weight || 2,
+                                            weight: cat.weight ?? 2,
+                                            opacity: isLine ? (cat.opacity ?? 0.6) : (cat.strokeOpacity ?? 1),
                                             fillColor: cat.color,
                                             fillOpacity: isLine ? 0 : (cat.opacity ?? 0.6),
                                             opacity: isLine ? (cat.opacity ?? 0.6) : 1
@@ -1308,8 +1315,9 @@
                                 // Single style (original)
                                 const color = vec.color || '#e74c3c';
                                 const opacity = vec.opacity ?? 0.6;
-                                const weight = vec.weight ?? 2;
+                                const weight = vec.weight ?? 0;
                                 const strokeColor = vec.strokeColor || '#333333';
+                                const strokeOpacity = vec.strokeOpacity ?? 1;
                                 const marker = vec.marker || '●';
                                 const markerSize = vec.markerSize || 16;
 
@@ -1319,7 +1327,7 @@
                                         weight: weight,
                                         fillColor: color,
                                         fillOpacity: isLine ? 0 : opacity,
-                                        opacity: isLine ? opacity : 1
+                                        opacity: isLine ? opacity : strokeOpacity
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
                                         return L.marker(latlng, {
@@ -1590,6 +1598,8 @@
             if (vtype==='line'||vtype==='polygon') {
                 document.getElementById('ve-weight').value = cat.weight??vec.weight??2;
                 document.getElementById('ve-weight-val').textContent = (cat.weight??vec.weight??2)+'px';
+                document.getElementById('ve-stroke-opacity').value = cat.strokeOpacity??vec.strokeOpacity??100;
+                document.getElementById('ve-stroke-opacity-val').textContent = (cat.strokeOpacity??vec.strokeOpacity??100)+'%';
             }
 
             // Stroke (polygon only)
@@ -1634,6 +1644,7 @@
             document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateCatPreview(); };
             document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateCatPreview(); };
             document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateCatPreview(); };
+            document.getElementById('ve-stroke-opacity').oninput = e => { document.getElementById('ve-stroke-opacity-val').textContent=e.target.value+'%'; updateCatPreview(); };
             document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateCatPreview();} };
             document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateCatPreview(); };
 
@@ -1660,8 +1671,9 @@
 
             cat.color = document.getElementById('ve-color-picker').value;
             cat.opacity = parseInt(document.getElementById('ve-opacity').value) / 100;
-            cat.weight = parseInt(document.getElementById('ve-weight').value) || 2;
+            cat.weight = parseInt(document.getElementById('ve-weight').value);
             cat.strokeColor = document.getElementById('ve-stroke-picker').value;
+            cat.strokeOpacity = parseInt(document.getElementById('ve-stroke-opacity').value) / 100;
             cat.marker = vec._selMarker || cat.marker || '●';
             cat.markerSize = parseInt(document.getElementById('ve-marker-size').value) || 16;
 
@@ -1719,6 +1731,8 @@
             if (vtype==='line'||vtype==='polygon') {
                 document.getElementById('ve-weight').value = vec.weight??2;
                 document.getElementById('ve-weight-val').textContent = (vec.weight??2)+'px';
+                document.getElementById('ve-stroke-opacity').value = (vec.strokeOpacity??1)*100;
+                document.getElementById('ve-stroke-opacity-val').textContent = Math.round((vec.strokeOpacity??1)*100)+'%';
             }
 
             // Stroke (polygon only)
@@ -1763,6 +1777,7 @@
             document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateVePreview(); };
             document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateVePreview(); };
             document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateVePreview(); };
+            document.getElementById('ve-stroke-opacity').oninput = e => { document.getElementById('ve-stroke-opacity-val').textContent=e.target.value+'%'; updateVePreview(); };
             document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateVePreview();} };
             document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateVePreview(); };
 
@@ -1803,8 +1818,9 @@
             if (!vec) { closeVectorEditor(); return; }
             vec.color = document.getElementById('ve-color-picker').value;
             vec.opacity = parseInt(document.getElementById('ve-opacity').value)/100;
-            vec.weight = parseInt(document.getElementById('ve-weight').value)||2;
+            vec.weight = parseInt(document.getElementById('ve-weight').value);
             vec.strokeColor = document.getElementById('ve-stroke-picker').value;
+            vec.strokeOpacity = parseInt(document.getElementById('ve-stroke-opacity').value)/100;
             vec.marker = vec._selMarker || vec.marker || '●';
             vec.markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
             delete vec._selMarker;
