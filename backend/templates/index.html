@@ -1384,22 +1384,33 @@
             renderVectorMenu();
         }
 
+        let vectorCategoryHiddenLayers = {};  // { "vid_ci": [layer, ...] }
+
         function toggleVectorCategory(vid, catIndex) {
             const catKey = `${vid}_${catIndex}`;
             const wasVisible = vectorCategoryVisibility[catKey] !== false;
             vectorCategoryVisibility[catKey] = !wasVisible;
-            // Find vector's categories to match feature values
             for (const g of vectorGroups) {
                 const vec = g.vectors?.find(v => v.id === vid);
                 if (vec?.categories?.[catIndex] && vectorLayers[vid]) {
                     const catVal = vec.categories[catIndex].value;
-                    vectorLayers[vid].eachLayer(layer => {
-                        const featVal = String(layer.feature?.properties?.[vec.categorizeColumn] || '');
-                        if (featVal === catVal) {
-                            if (wasVisible) vectorLayers[vid].removeLayer(layer);
-                            else vectorLayers[vid].addLayer(layer);
-                        }
-                    });
+                    if (wasVisible) {
+                        // Hide: remove layers and store them
+                        const hidden = [];
+                        vectorLayers[vid].eachLayer(layer => {
+                            const featVal = String(layer.feature?.properties?.[vec.categorizeColumn] || '');
+                            if (featVal === catVal) {
+                                vectorLayers[vid].removeLayer(layer);
+                                hidden.push(layer);
+                            }
+                        });
+                        vectorCategoryHiddenLayers[catKey] = hidden;
+                    } else {
+                        // Show: re-add stored layers
+                        const hidden = vectorCategoryHiddenLayers[catKey] || [];
+                        hidden.forEach(layer => vectorLayers[vid].addLayer(layer));
+                        delete vectorCategoryHiddenLayers[catKey];
+                    }
                     break;
                 }
             }
