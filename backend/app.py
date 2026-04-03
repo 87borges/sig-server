@@ -523,7 +523,21 @@ def upload_vector(project, gid):
                     print(f'GPKG layers detected: {gpkg_layers}')
                     if len(gpkg_layers) > 1:
                         for layer_name in gpkg_layers:
-                            vec_entry = {'id': vid, 'name': f"{name}_{layer_name}", 'type': 'gpkg', 'gpkg_layer': layer_name, 'gpkg_vid': vid}
+                            # Detect geometry type for this layer
+                            geom_type = 'polygon'
+                            try:
+                                r2 = sp.run(['ogrinfo', '-so', '-al', gpkg_path, layer_name], capture_output=True, text=True, timeout=10)
+                                if r2.returncode == 0:
+                                    out = r2.stdout.lower()
+                                    if 'point' in out and 'line' not in out and 'polygon' not in out:
+                                        geom_type = 'point'
+                                    elif 'line string' in out or 'linestring' in out or 'multiline' in out:
+                                        geom_type = 'line'
+                                    elif 'polygon' in out or 'multipolygon' in out:
+                                        geom_type = 'polygon'
+                            except:
+                                pass
+                            vec_entry = {'id': vid, 'name': f"{name}_{layer_name}", 'type': 'gpkg', 'gpkg_layer': layer_name, 'gpkg_vid': vid, 'geom_type': geom_type}
                             for g in groups:
                                 if g['id'] == gid:
                                     g.setdefault('vectors', []).append(vec_entry)
@@ -534,11 +548,22 @@ def upload_vector(project, gid):
                         continue
                     elif len(gpkg_layers) == 1:
                         # Single layer GPKG: store layer name for conversion
+                        geom_type = 'polygon'
+                        try:
+                            r2 = sp.run(['ogrinfo', '-so', '-al', gpkg_path, gpkg_layers[0]], capture_output=True, text=True, timeout=10)
+                            if r2.returncode == 0:
+                                out = r2.stdout.lower()
+                                if 'point' in out and 'line' not in out and 'polygon' not in out:
+                                    geom_type = 'point'
+                                elif 'line string' in out or 'linestring' in out or 'multiline' in out:
+                                    geom_type = 'line'
+                        except:
+                            pass
                         for g in groups:
                             if g['id'] == gid:
-                                g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg', 'gpkg_layer': gpkg_layers[0], 'gpkg_vid': vid})
+                                g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg', 'gpkg_layer': gpkg_layers[0], 'gpkg_vid': vid, 'geom_type': geom_type})
                                 break
-                        results.append({'id': vid, 'name': name, 'type': 'gpkg'})
+                        results.append({'id': vid, 'name': name, 'type': 'gpkg', 'geom_type': geom_type})
                         with open(meta_path, 'w') as mf:
                             json.dump(groups, mf)
                         continue
@@ -715,6 +740,7 @@ def get_vector_files_list(project, vid):
 def detect_vector_type(project, vid):
     """Detect geometry type without full conversion"""
     import subprocess
+    layer_name = request.args.get('layer')
     files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
     main_file = None
     for f in files:
@@ -738,14 +764,27 @@ def detect_vector_type(project, vid):
     if not main_file:
         return jsonify({'type': 'polygon'})
     try:
-        r = subprocess.run(['ogrinfo', '-so', '-al', main_file], capture_output=True, text=True, timeout=10)
+        cmd = ['ogrinfo', '-so', '-al', main_file]
+        if layer_name and main_file.endswith('.gpkg'):
+            cmd.append(layer_name)
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         output = r.stdout.lower()
-        if 'point' in output:
-            return jsonify({'type': 'point'})
-        elif 'line string' in output or 'linestring' in output or 'multiline' in output:
-            return jsonify({'type': 'line'})
-        elif 'polygon' in output or 'multipolygon' in output:
-            return jsonify({'type': 'polygon'})
+        # For GPKG with specific layer, check the layer's geometry section
+        if layer_name and main_file.endswith('.gpkg'):
+            # ogrinfo -al with layer shows only that layer's info
+            if 'point' in output and 'polygon' not in output and 'line' not in output:
+                return jsonify({'type': 'point'})
+            elif 'line string' in output or 'linestring' in output or 'multiline' in output:
+                return jsonify({'type': 'line'})
+            elif 'polygon' in output or 'multipolygon' in output:
+                return jsonify({'type': 'polygon'})
+        else:
+            if 'point' in output:
+                return jsonify({'type': 'point'})
+            elif 'line string' in output or 'linestring' in output or 'multiline' in output:
+                return jsonify({'type': 'line'})
+            elif 'polygon' in output or 'multipolygon' in output:
+                return jsonify({'type': 'polygon'})
         return jsonify({'type': 'polygon'})
     except:
         return jsonify({'type': 'polygon'})

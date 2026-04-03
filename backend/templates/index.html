@@ -834,7 +834,7 @@
                     const undetected = [];
                     groups.forEach(g => g.vectors.forEach(v => { if (!v._detectedType) undetected.push(v); }));
                     if (undetected.length > 0) {
-                        Promise.all(undetected.map(v => fetch(`/api/vector/${projetoAtual}/detect-type/${v.id}`).then(r=>r.json()).then(d=>{v._detectedType=d.type;}))).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
+                        Promise.all(undetected.map(v => { if (v.geom_type) { v._detectedType = v.geom_type; return Promise.resolve(); } let url = `/api/vector/${projetoAtual}/detect-type/${v.id}`; if (v.gpkg_layer) url += `?layer=${encodeURIComponent(v.gpkg_layer)}`; return fetch(url).then(r=>r.json()).then(d=>{v._detectedType=d.type;}); })).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
                     } else {
                         renderVectorMenu();
                     }
