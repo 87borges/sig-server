@@ -1014,20 +1014,39 @@
         // ===== DRAG & DROP HELPER =====
         function makeDraggable(el, getDragData, onDrop) {
             let dragCounter = 0;
+            el.draggable = true;
             el.addEventListener('dragstart', e => {
+                e.stopPropagation(); // prevent parent from also starting drag
+                e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/plain', JSON.stringify(getDragData()));
                 el.style.opacity = '0.4';
             });
-            el.addEventListener('dragend', () => { el.style.opacity = '1'; });
-            el.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; el.style.borderTop = '2px solid #999'; });
-            el.addEventListener('dragover', e => { e.preventDefault(); });
-            el.addEventListener('dragleave', () => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; el.style.borderTop = ''; } });
+            el.addEventListener('dragend', e => {
+                e.stopPropagation();
+                el.style.opacity = '1';
+            });
+            el.addEventListener('dragenter', e => {
+                e.preventDefault();
+                dragCounter++;
+                el.style.borderTop = '2px solid #999';
+            });
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.stopPropagation(); // prevent parent from also handling
+            });
+            el.addEventListener('dragleave', e => {
+                dragCounter--;
+                if (dragCounter <= 0) { dragCounter = 0; el.style.borderTop = ''; }
+            });
             el.addEventListener('drop', e => {
-                e.preventDefault(); dragCounter = 0; el.style.borderTop = '';
+                e.preventDefault();
+                e.stopPropagation(); // prevent parent from also handling
+                dragCounter = 0;
+                el.style.borderTop = '';
                 try {
                     const from = JSON.parse(e.dataTransfer.getData('text/plain'));
                     onDrop(from);
-                } catch(err) {}
+                } catch(err) { console.error('Drop error:', err); }
             });
         }
 
