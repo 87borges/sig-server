@@ -1159,8 +1159,6 @@
                                         const val = String(feature.properties?.[vec.categorizeColumn] || '');
                                         const cat = catMap[val];
                                         if (!cat) return { opacity: 0, fillOpacity: 0 };
-                                        const catKey = `${vec.id}_${cat.index}`;
-                                        if (vectorCategoryVisibility[catKey] === false) return { opacity: 0, fillOpacity: 0 };
                                         if (isPoint) return { opacity: cat.opacity ?? 0.6 };
                                         return {
                                             color: isLine ? cat.color : (cat.strokeColor || '#333333'),
@@ -1174,8 +1172,6 @@
                                         const val = String(f.properties?.[vec.categorizeColumn] || '');
                                         const cat = catMap[val];
                                         if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
-                                        const catKey = `${vec.id}_${cat.index}`;
-                                        if (vectorCategoryVisibility[catKey] === false) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
                                         const mkr = cat.marker || '●';
                                         const msz = cat.markerSize || 16;
                                         return L.marker(latlng, {
@@ -1392,14 +1388,18 @@
             const catKey = `${vid}_${catIndex}`;
             const wasVisible = vectorCategoryVisibility[catKey] !== false;
             vectorCategoryVisibility[catKey] = !wasVisible;
-            // Force layer re-render to apply visibility change
-            if (vectorLayers[vid]) { map.removeLayer(vectorLayers[vid]); delete vectorLayers[vid]; }
-            // Find group/vec to call toggleVector with forceShow
+            // Find vector's categories to match feature values
             for (const g of vectorGroups) {
                 const vec = g.vectors?.find(v => v.id === vid);
-                if (vec) {
-                    vectorVisibility[vid] = true;
-                    toggleVector(g.id, vid, true);
+                if (vec?.categories?.[catIndex] && vectorLayers[vid]) {
+                    const catVal = vec.categories[catIndex].value;
+                    vectorLayers[vid].eachLayer(layer => {
+                        const featVal = String(layer.feature?.properties?.[vec.categorizeColumn] || '');
+                        if (featVal === catVal) {
+                            if (wasVisible) vectorLayers[vid].removeLayer(layer);
+                            else vectorLayers[vid].addLayer(layer);
+                        }
+                    });
                     break;
                 }
             }
