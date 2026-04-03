@@ -2,6 +2,7 @@
 SIG Server — Plataforma GIS Online
 """
 import os
+import shutil
 import requests as req
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
@@ -502,74 +503,57 @@ def upload_vector(project, gid):
         fname = f'{vid}_{secure_filename(f.filename)}'
         f.save(os.path.join(VECTOR_DIR, fname))
 
-        # For GeoPackage: detect layers and create one vector per layer
+        # For GeoPackage: convert each layer to shapefile
         if ext == 'gpkg':
-            import subprocess as sp
+            import subprocess as sp, re, tempfile
             gpkg_path = os.path.join(VECTOR_DIR, fname)
             try:
                 r = sp.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
-                print(f'ogrinfo for {name}: rc={r.returncode}, stderr={r.stderr[:200]}, stdout_lines={len(r.stdout.split(chr(10)))}')
                 if r.returncode == 0:
-                    import re
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
-                        stripped = line.strip()
-                        # Match ogrinfo layer lines: "1: layer_name (Geometry type)"
-                        m = re.match(r'^(\d+):\s+(\S+)', stripped)
+                        m = re.match(r'^(\d+):\s+(\S+)', line.strip())
                         if m:
                             layer_name = m.group(2).strip('(')
                             if layer_name and layer_name not in gpkg_layers:
                                 gpkg_layers.append(layer_name)
-                    print(f'GPKG layers detected: {gpkg_layers}')
-                    if len(gpkg_layers) > 1:
-                        for layer_name in gpkg_layers:
-                            # Detect geometry type for this layer
-                            geom_type = 'polygon'
-                            try:
-                                r2 = sp.run(['ogrinfo', '-so', '-al', gpkg_path, layer_name], capture_output=True, text=True, timeout=10)
-                                if r2.returncode == 0:
-                                    out = r2.stdout.lower()
-                                    if 'point' in out and 'line' not in out and 'polygon' not in out:
-                                        geom_type = 'point'
-                                    elif 'line string' in out or 'linestring' in out or 'multiline' in out:
-                                        geom_type = 'line'
-                                    elif 'polygon' in out or 'multipolygon' in out:
-                                        geom_type = 'polygon'
-                            except:
-                                pass
-                            vec_entry = {'id': vid, 'name': f"{name}_{layer_name}", 'type': 'gpkg', 'gpkg_layer': layer_name, 'gpkg_vid': vid, 'geom_type': geom_type}
-                            for g in groups:
-                                if g['id'] == gid:
-                                    g.setdefault('vectors', []).append(vec_entry)
-                                    break
-                            results.append(vec_entry)
-                        with open(meta_path, 'w') as mf:
-                            json.dump(groups, mf)
-                        continue
-                    elif len(gpkg_layers) == 1:
-                        # Single layer GPKG: store layer name for conversion
-                        geom_type = 'polygon'
-                        try:
-                            r2 = sp.run(['ogrinfo', '-so', '-al', gpkg_path, gpkg_layers[0]], capture_output=True, text=True, timeout=10)
-                            if r2.returncode == 0:
-                                out = r2.stdout.lower()
-                                if 'point' in out and 'line' not in out and 'polygon' not in out:
-                                    geom_type = 'point'
-                                elif 'line string' in out or 'linestring' in out or 'multiline' in out:
-                                    geom_type = 'line'
-                        except:
-                            pass
+                    if not gpkg_layers:
+                        gpkg_layers = [None]  # fallback: ogr2ogr uses first layer
+                    gpkg_entries = []
+                    for layer_name in gpkg_layers:
+                        layer_vid = str(uuid.uuid4())[:8]
+                        # Convert GPKG layer to shapefile
+                        out_dir = tempfile.mkdtemp()
+                        out_shp = os.path.join(out_dir, f'{layer_vid}.shp')
+                        cmd = ['ogr2ogr', '-f', 'ESRI Shapefile', out_shp, gpkg_path]
+                        if layer_name:
+                            cmd.append(layer_name)
+                        cr = sp.run(cmd, capture_output=True, text=True, timeout=60)
+                        if cr.returncode != 0 or not os.path.exists(out_shp):
+                            print(f'GPKG layer {layer_name} conversion failed: {cr.stderr[:200]}')
+                            continue
+                        # Move shapefile components to VECTOR_DIR
+                        for ff in os.listdir(out_dir):
+                            if ff.startswith(layer_vid):
+                                shutil.move(os.path.join(out_dir, ff), os.path.join(VECTOR_DIR, ff))
+                        shutil.rmtree(out_dir, ignore_errors=True)
+                        layer_display = layer_name if layer_name else name
+                        gpkg_entries.append({'id': layer_vid, 'name': f"{name}_{layer_display}"})
+                    # Register all converted layers
+                    for entry in gpkg_entries:
                         for g in groups:
                             if g['id'] == gid:
-                                g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg', 'gpkg_layer': gpkg_layers[0], 'gpkg_vid': vid, 'geom_type': geom_type})
+                                g.setdefault('vectors', []).append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
                                 break
-                        results.append({'id': vid, 'name': name, 'type': 'gpkg', 'geom_type': geom_type})
-                        with open(meta_path, 'w') as mf:
-                            json.dump(groups, mf)
-                        continue
+                        results.append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
+                    with open(meta_path, 'w') as mf:
+                        json.dump(groups, mf)
+                    # Remove original GPKG file
+                    os.remove(gpkg_path)
+                    continue
             except Exception as e:
-                print(f'GPKG layer detection error: {e}')
-            # GPKG detected but layers unknown — add as single vector (ogr2ogr will use first layer)
+                print(f'GPKG conversion error: {e}')
+            # Fallback: treat as single vector
             for g in groups:
                 if g['id'] == gid:
                     g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg'})
