@@ -503,13 +503,13 @@ def upload_vector(project, gid):
         fname = f'{vid}_{secure_filename(f.filename)}'
         f.save(os.path.join(VECTOR_DIR, fname))
 
-        # For GeoPackage: convert each layer to shapefile
+        # For GeoPackage: convert each layer to GeoJSON
         if ext == 'gpkg':
-            import subprocess as sp, re, tempfile
+            import subprocess as sp, re
             gpkg_path = os.path.join(VECTOR_DIR, fname)
             try:
                 r = sp.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
-                app.logger.info(f'GPKG ogrinfo: rc={r.returncode} stdout={r.stdout[:500]} stderr={r.stderr[:200]}')
+                app.logger.info(f'GPKG ogrinfo: rc={r.returncode} stdout={r.stdout[:500]}')
                 if r.returncode == 0:
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
@@ -525,35 +525,26 @@ def upload_vector(project, gid):
                     for layer_name in gpkg_layers:
                         layer_vid = str(uuid.uuid4())[:8]
                         layer_display = layer_name if layer_name else name
-                        out_dir = tempfile.mkdtemp()
-                        out_shp = os.path.join(out_dir, f'{layer_vid}.shp')
-                        cmd = ['ogr2ogr', '-f', 'ESRI Shapefile', out_shp, gpkg_path]
+                        out_geojson = os.path.join(VECTOR_DIR, f'{layer_vid}.geojson')
+                        cmd = ['ogr2ogr', '-f', 'GeoJSON', out_geojson, gpkg_path]
                         if layer_name:
-                            safe_name = layer_name.replace(' ', '_').replace('-', '_')
-                            cmd.extend(['-nln', safe_name, layer_name])
+                            cmd.append(layer_name)
                         cr = sp.run(cmd, capture_output=True, text=True, timeout=60)
-                        app.logger.info(f'GPKG convert {layer_name}: rc={cr.returncode} shp_exists={os.path.exists(out_shp)} stderr={cr.stderr[:300]}')
-                        if cr.returncode != 0 or not os.path.exists(out_shp):
+                        app.logger.info(f'GPKG convert {layer_name}: rc={cr.returncode} exists={os.path.exists(out_geojson)} stderr={cr.stderr[:300]}')
+                        if cr.returncode != 0 or not os.path.exists(out_geojson):
                             continue
-                        for ff in os.listdir(out_dir):
-                            if ff.startswith(layer_vid):
-                                dest = os.path.join(VECTOR_DIR, ff)
-                                shutil.copy2(os.path.join(out_dir, ff), dest)
-                        shutil.rmtree(out_dir, ignore_errors=True)
-                        # Verify files were created
-                        created = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{layer_vid}_')]
-                        app.logger.info(f'GPKG layer {layer_name}: vid={layer_vid} files={created}')
-                        if not created:
+                        # Clean up empty geojson
+                        if os.path.getsize(out_geojson) < 10:
+                            os.remove(out_geojson)
                             continue
-                        layer_display = layer_name if layer_name else name
                         gpkg_entries.append({'id': layer_vid, 'name': f"{name}_{layer_display}"})
                     if gpkg_entries:
                         for entry in gpkg_entries:
                             for g in groups:
                                 if g['id'] == gid:
-                                    g.setdefault('vectors', []).append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
+                                    g.setdefault('vectors', []).append({'id': entry['id'], 'name': entry['name'], 'type': 'geojson'})
                                     break
-                            results.append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
+                            results.append({'id': entry['id'], 'name': entry['name'], 'type': 'geojson'})
                         with open(meta_path, 'w') as mf:
                             json.dump(groups, mf)
                         os.remove(gpkg_path)
@@ -658,6 +649,21 @@ def get_vector_columns(project, vid):
     if not main_file:
         return jsonify({'error': 'Formato não suportado'}), 400
     try:
+        # For GeoJSON, read columns directly
+        if main_file.endswith('.geojson'):
+            import json as gj
+            with open(main_file, 'r', encoding='utf-8') as gf:
+                gjdata = gj.load(gf)
+            columns = {}
+            for feat in gjdata.get('features', []):
+                for k, v in feat.get('properties', {}).items():
+                    if v is None or isinstance(v, (dict, list)):
+                        continue
+                    if k not in columns:
+                        columns[k] = set()
+                    columns[k].add(str(v))
+            result = [{'name': k, 'values': sorted(vals), 'count': len(vals)} for k, vals in columns.items()]
+            return jsonify({'columns': result})
         if main_file.endswith('.zip'):
             tmpdir = tempfile.mkdtemp()
             with zipfile.ZipFile(main_file, 'r') as z:
@@ -742,7 +748,7 @@ def detect_vector_type(project, vid):
                 z.extractall(tmpdir)
             for ff in os.listdir(tmpdir):
                 ext = ff.rsplit('.', 1)[-1].lower()
-                if ext in ('shp', 'gpkg', 'kml'):
+                if ext in ('shp', 'gpkg', 'kml', 'geojson'):
                     main_file = os.path.join(tmpdir, ff)
                     break
             break
@@ -755,6 +761,27 @@ def detect_vector_type(project, vid):
     if not main_file:
         return jsonify({'type': 'polygon'})
     try:
+        # For GeoJSON, detect geometry type from features
+        if main_file.endswith('.geojson'):
+            import json as gj
+            with open(main_file, 'r') as gf:
+                gjdata = gj.load(gf)
+            for feat in gjdata.get('features', []):
+                geom = feat.get('geometry', {})
+                gtype = geom.get('type', '').lower()
+                if 'point' in gtype and 'multi' not in gtype:
+                    return jsonify({'type': 'point'})
+                elif 'linestring' in gtype:
+                    return jsonify({'type': 'line'})
+                elif 'polygon' in gtype:
+                    return jsonify({'type': 'polygon'})
+                elif 'multipoint' in gtype:
+                    return jsonify({'type': 'point'})
+                elif 'multilinestring' in gtype:
+                    return jsonify({'type': 'line'})
+                elif 'multipolygon' in gtype:
+                    return jsonify({'type': 'polygon'})
+            return jsonify({'type': 'polygon'})
         cmd = ['ogrinfo', '-so', '-al', main_file]
         if layer_name and main_file.endswith('.gpkg'):
             cmd.append(layer_name)
@@ -802,6 +829,11 @@ def get_vector_geojson(project, vid):
     if not main_file:
         return jsonify({'error': 'Formato não suportado'}), 400
     try:
+        # If already GeoJSON, serve directly
+        if main_file.endswith('.geojson'):
+            with open(main_file, 'r', encoding='utf-8') as gf:
+                content = gf.read()
+            return (content, 200, {'Content-Type': 'application/geo+json'})
         # If zip, extract to temp dir first
         if main_file.endswith('.zip'):
             tmpdir = tempfile.mkdtemp()
