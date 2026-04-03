@@ -1335,9 +1335,6 @@
                                 };
                             }
                             vectorLayers[vid] = L.geoJSON(geojson, layerOpts).addTo(map);
-                            if (vectorLayers[vid].getLayers().length === 0) {
-                                alert('Vetor carregado mas sem geometrias visíveis.');
-                            }
                             saveVectorGroups();
                         } else {
                             alert('Não foi possível converter o vetor. Formato: ' + vec.type);
