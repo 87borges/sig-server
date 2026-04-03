@@ -504,16 +504,23 @@ def upload_vector(project, gid):
 
         # For GeoPackage: detect layers and create one vector per layer
         if ext == 'gpkg':
-            import subprocess
+            import subprocess as sp
             gpkg_path = os.path.join(VECTOR_DIR, fname)
             try:
-                r = subprocess.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
+                r = sp.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
+                print(f'ogrinfo for {name}: rc={r.returncode}, stderr={r.stderr[:200]}, stdout_lines={len(r.stdout.split(chr(10)))}')
                 if r.returncode == 0:
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
-                        if line.strip().startswith('1:'):
-                            layer_name = line.strip().split(' ', 1)[1].strip().split(' ')[0]
-                            if layer_name: gpkg_layers.append(layer_name)
+                        stripped = line.strip()
+                        if stripped.startswith('1:') or stripped.startswith('2:') or stripped.startswith('3:'):
+                            # Format: "1: layer_name (Geometry type)"
+                            parts = stripped.split(' ', 1)
+                            if len(parts) >= 2:
+                                layer_name = parts[1].strip().split(' ')[0].strip('(').strip()
+                                if layer_name and layer_name not in gpkg_layers:
+                                    gpkg_layers.append(layer_name)
+                    print(f'GPKG layers detected: {gpkg_layers}')
                     if len(gpkg_layers) > 1:
                         for layer_name in gpkg_layers:
                             vec_entry = {'id': vid, 'name': f"{name}_{layer_name}", 'type': 'gpkg', 'gpkg_layer': layer_name, 'gpkg_vid': vid}
@@ -525,8 +532,18 @@ def upload_vector(project, gid):
                         with open(meta_path, 'w') as mf:
                             json.dump(groups, mf)
                         continue
-            except:
-                pass
+                    elif len(gpkg_layers) == 1:
+                        # Single layer GPKG: store layer name for conversion
+                        for g in groups:
+                            if g['id'] == gid:
+                                g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg', 'gpkg_layer': gpkg_layers[0], 'gpkg_vid': vid})
+                                break
+                        results.append({'id': vid, 'name': name, 'type': 'gpkg'})
+                        with open(meta_path, 'w') as mf:
+                            json.dump(groups, mf)
+                        continue
+            except Exception as e:
+                print(f'GPKG layer detection error: {e}')
 
         for g in groups:
             if g['id'] == gid:
@@ -625,13 +642,14 @@ def get_vector_columns(project, vid):
                 if ext in ('shp', 'gpkg', 'kml'):
                     main_file = os.path.join(tmpdir, f)
                     break
-        r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file],
-                          capture_output=True, text=True, timeout=60)
-        # For GPKG, support layer param
         layer_name = request.args.get('layer')
+        ogr_cmd = ['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/']
         if layer_name and main_file.endswith('.gpkg'):
-            r = subprocess.run(['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', '/vsistdout/', main_file, layer_name],
-                              capture_output=True, text=True, timeout=60)
+            ogr_cmd.append(main_file)
+            ogr_cmd.append(layer_name)
+        else:
+            ogr_cmd.append(main_file)
+        r = subprocess.run(ogr_cmd, capture_output=True, text=True, timeout=60)
         if r.returncode != 0 or not r.stdout:
             return jsonify({'error': f'Conversão falhou: {r.stderr[:300]}'}), 500
         gj = json.loads(r.stdout)
