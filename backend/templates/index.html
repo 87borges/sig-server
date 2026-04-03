@@ -1446,7 +1446,8 @@
 
         function selectCatColumn(colName, values) {
             catColumn = colName;
-            const vec = vectorGroups.flatMap(g=>g.vectors).find(v=>v.id===vid);
+            let vec = null;
+            for (const g of vectorGroups) { vec = g.vectors.find(v=>v.id===catVid); if (vec) break; }
             const vtype = vec ? (vec._detectedType || 'polygon') : 'polygon';
             catCategories = values.map((v, i) => ({
                 value: v,
