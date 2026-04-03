@@ -11,6 +11,16 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; display: flex; min-height: 100vh; }
 
+        /* Toggle Switch */
+        .vis-toggle { position:relative; display:inline-block; width:26px; height:14px; flex-shrink:0; cursor:pointer; }
+        .vis-toggle input { opacity:0; width:0; height:0; position:absolute; }
+        .vis-toggle .slider { position:absolute; inset:0; background:#555; border-radius:7px; transition:0.2s; }
+        .vis-toggle .slider::before { content:''; position:absolute; width:10px; height:10px; left:2px; bottom:2px; background:white; border-radius:50%; transition:0.2s; }
+        .vis-toggle input:checked + .slider { background:#4CAF50; }
+        .vis-toggle input:checked + .slider::before { transform:translateX(12px); }
+        .vis-toggle.dark input:checked + .slider { background:#4CAF50; }
+        .vis-toggle.dark .slider { background:#666; }
+
         /* Sidebar */
         .sidebar { width: 60px; background: #1a1a1a; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; overflow: hidden; transition: width 0.25s ease; }
         .sidebar:hover { width: 220px; }
@@ -576,7 +586,7 @@
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 12px;font-weight:600;font-size:0.72em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.4;flex-shrink:0;user-select:none">⠿</span>
-                    <span onclick="toggleAllRasters('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllRasters('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleRasterGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
                     <span ondblclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" onclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptRasterUpload('${g.id}')" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Adicionar raster">➕</span>
@@ -607,7 +617,7 @@
                         );
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                            <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                            <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${vis?'checked':''} onchange="toggleRaster('${g.id}','${r.id}')"><span class="slider"></span></label></span>
                             <span ondblclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" onclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" style="flex:1;cursor:text;font-size:0.78em;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
                             <span onclick="zoomToRaster('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                             <span onclick="deleteRasterFromGroup('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Excluir raster">🗑️</span>
@@ -857,7 +867,7 @@
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                    <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllVectors('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleVectorGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
                     <span id="vgname_${g.id}" ondblclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" onclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
@@ -912,7 +922,7 @@
 
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                            <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                            <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${vis?'checked':''} onchange="toggleVector('${g.id}','${v.id}')"><span class="slider"></span></label></span>
                             ${collapseArrow}
                             <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
@@ -942,7 +952,7 @@
                                 }
 
                                 subrow.innerHTML = `
-                                    <span id="cateye_${catKey}" onclick="toggleVectorCategory('${v.id}',${ci})" style="cursor:pointer;font-size:0.8em;flex-shrink:0;user-select:none">${catVis ? '👁️' : '🙈'}</span>
+                                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${catVis?'checked':''} onchange="toggleVectorCategory('${v.id}',${ci})"><span class="slider"></span></label></span>
                                     ${catLegend}
                                     <span style="flex:1;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
                                     <span onclick="zoomToVectorCategory('${v.id}',${ci})" style="cursor:pointer;opacity:0.4;font-size:0.7em;flex-shrink:0" title="Centralizar na tela">🎯</span>
