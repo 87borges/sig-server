@@ -811,6 +811,8 @@
         let vectorTimeout = null;
         let vectorGroups = [];
         let vectorLayers = {};
+        let vectorCategoryVisibility = {};  // { "vid_value": true/false } undefined = visible
+        let vectorCategoryCollapsed = {};   // { "vid": true/false }
         let vectorVisibility = {};      // individual: true/false (undefined = not set = visible)
         let vectorGroupVisibility = {}; // group: true/false (undefined = visible)
         let vectorGroupCollapsed = {};  // group: true/false
@@ -877,6 +879,13 @@
                 gdiv.appendChild(header);
                 if (!collapsed) {
                     g.vectors.forEach((v, vi) => {
+                        const vis = isVectorVisible(g.id, v.id);
+                        const color = v.color || '#e74c3c';
+                        const vtype = v._detectedType || 'polygon';
+                        const hasCat = v.categorized && v.categories && v.categories.length > 0;
+                        const catCollapsed = vectorCategoryCollapsed[v.id];
+
+                        // Vector row
                         const row = document.createElement('div');
                         row.className = 'basemap-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
@@ -901,20 +910,16 @@
                                 saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
                             } catch(err) {}
                         });
-                        const vis = isVectorVisible(g.id, v.id);
-                        const color = v.color || '#e74c3c';
-                        const vtype = v._detectedType || 'polygon';
-                        const hasCat = v.categorized && v.categories && v.categories.length > 0;
+
                         let legendHtml = '';
                         if (hasCat) {
-                            const shown = v.categories.slice(0, 3);
-                            const remaining = v.categories.length - 3;
-                            const items = shown.map(c => {
+                            const items = v.categories.slice(0, 3).map(c => {
                                 if (vtype === 'point') return `<span style="font-size:10px;color:${c.color}">${v.marker||'●'}</span>`;
                                 if (vtype === 'line') return `<span style="display:inline-block;width:12px;height:2px;background:${c.color};vertical-align:middle;margin-right:1px"></span>`;
                                 return `<span style="display:inline-block;width:10px;height:10px;background:${c.color};border-radius:2px;vertical-align:middle;margin-right:1px"></span>`;
                             }).join('');
-                            legendHtml = `<span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer" title="${v.categorizeColumn}">${items}${remaining > 0 ? '<span style="font-size:0.65em;color:#888">+'+remaining+'</span>' : ''}</span>`;
+                            const remaining = v.categories.length - 3;
+                            legendHtml = `${items}${remaining > 0 ? '<span style="font-size:0.65em;color:#888">+'+remaining+'</span>' : ''}`;
                         } else {
                             if (vtype === 'point') {
                                 const m = v.marker || '●'; const ms = v.markerSize || 16;
@@ -926,15 +931,41 @@
                                 legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
                             }
                         }
+
+                        const collapseArrow = hasCat ? `<span onclick="toggleVectorCategoryCollapse('${v.id}')" style="cursor:pointer;font-size:0.6em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${catCollapsed?'-90':'0'}deg)">▼</span>` : '';
+
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                             <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                            ${collapseArrow}
                             <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
                             <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
                             <span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Categorizar por atributo">🏷️</span>
                         `;
                         gdiv.appendChild(row);
+
+                        // Category sub-items (only if categorized and expanded)
+                        if (hasCat && !catCollapsed) {
+                            v.categories.forEach((cat, ci) => {
+                                const catKey = `${v.id}_${ci}`;
+                                const catVis = vectorCategoryVisibility[catKey] !== false;
+                                const subrow = document.createElement('div');
+                                subrow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 12px 2px 52px;font-size:0.68em';
+                                let catLegend = '';
+                                if (vtype === 'point') catLegend = `<span style="font-size:10px;color:${cat.color}">${v.marker||'●'}</span>`;
+                                else if (vtype === 'line') catLegend = `<span style="display:inline-block;width:14px;height:3px;background:${cat.color};border-radius:1px;vertical-align:middle"></span>`;
+                                else catLegend = `<span style="display:inline-block;width:12px;height:10px;background:${cat.color};border-radius:2px;vertical-align:middle"></span>`;
+
+                                subrow.innerHTML = `
+                                    <span id="cateye_${catKey}" onclick="toggleVectorCategory('${v.id}',${ci})" style="cursor:pointer;font-size:0.8em;flex-shrink:0;user-select:none">${catVis ? '👁️' : '🙈'}</span>
+                                    ${catLegend}
+                                    <span style="flex:1;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
+                                    <span onclick="editCategoryColor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Editar cor">✏️</span>
+                                `;
+                                gdiv.appendChild(subrow);
+                            });
+                        }
                     });
                 }
                 list.appendChild(gdiv);
@@ -1119,7 +1150,7 @@
                             if (hasCategories) {
                                 // Categorized style: color by property value
                                 const catMap = {};
-                                vec.categories.forEach(c => catMap[c.value] = c.color);
+                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, index: ci });
                                 const opacity = vec.opacity ?? 0.6;
                                 const weight = vec.weight ?? 2;
                                 const marker = vec.marker || '●';
@@ -1128,7 +1159,11 @@
                                 layerOpts = {
                                     style: (feature) => {
                                         const val = String(feature.properties?.[vec.categorizeColumn] || '');
-                                        const color = catMap[val] || '#cccccc';
+                                        const cat = catMap[val];
+                                        if (!cat) return { opacity: 0, fillOpacity: 0 };
+                                        const catKey = `${vec.id}_${cat.index}`;
+                                        if (vectorCategoryVisibility[catKey] === false) return { opacity: 0, fillOpacity: 0 };
+                                        const color = cat.color;
                                         if (isPoint) return { opacity: opacity };
                                         return {
                                             color: isLine ? color : (vec.strokeColor || '#333333'),
@@ -1140,7 +1175,11 @@
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
                                         const val = String(f.properties?.[vec.categorizeColumn] || '');
-                                        const color = catMap[val] || '#cccccc';
+                                        const cat = catMap[val];
+                                        if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
+                                        const catKey = `${vec.id}_${cat.index}`;
+                                        if (vectorCategoryVisibility[catKey] === false) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
+                                        const color = cat.color;
                                         return L.marker(latlng, {
                                             icon: L.divIcon({
                                                 html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
@@ -1152,7 +1191,6 @@
                                     } : null,
                                     onEachFeature: (f, l) => {
                                         if (f.properties) {
-                                            const val = f.properties[vec.categorizeColumn] ? ` [${f.properties[vec.categorizeColumn]}]` : '';
                                             l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados');
                                         }
                                     }
@@ -1316,6 +1354,10 @@
             saveVectorGroups();
             // Remove current layer to force reload with categorized style
             if (vectorLayers[catVid]) { map.removeLayer(vectorLayers[catVid]); delete vectorLayers[catVid]; }
+            // Reset category visibility (all visible)
+            vec.categories.forEach((c, ci) => { delete vectorCategoryVisibility[`${catVid}_${ci}`]; });
+            // Expand category view
+            vectorCategoryCollapsed[catVid] = false;
             // Force show with categorized style
             vectorVisibility[catVid] = undefined; // reset so forceShow works
             await toggleVector(catGid, catVid, true);
@@ -1326,6 +1368,65 @@
         function closeCategorize() {
             document.getElementById('categorize-modal').style.display = 'none';
             catGid = null; catVid = null; catColumn = null; catCategories = null;
+        }
+
+        function toggleVectorCategoryCollapse(vid) {
+            vectorCategoryCollapsed[vid] = !vectorCategoryCollapsed[vid];
+            renderVectorMenu();
+        }
+
+        function toggleVectorCategory(vid, catIndex) {
+            const catKey = `${vid}_${catIndex}`;
+            const wasVisible = vectorCategoryVisibility[catKey] !== false;
+            vectorCategoryVisibility[catKey] = !wasVisible;
+            // Update layer visibility for this category's features
+            if (vectorLayers[vid]) {
+                vectorLayers[vid].eachLayer(layer => {
+                    if (layer.feature?.properties) {
+                        const group = vectorGroups.find(g => g.vectors?.some(v => v.id === vid));
+                        const vec = group?.vectors.find(v => v.id === vid);
+                        if (vec?.categories?.[catIndex]) {
+                            const catVal = vec.categories[catIndex].value;
+                            const featVal = String(layer.feature.properties[vec.categorizeColumn] || '');
+                            if (featVal === catVal) {
+                                if (wasVisible) {
+                                    vectorLayers[vid].removeLayer(layer);
+                                } else {
+                                    vectorLayers[vid].addLayer(layer);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            renderVectorMenu();
+        }
+
+        function editCategoryColor(gid, vid, catIndex) {
+            const group = vectorGroups.find(g => g.id === gid);
+            const vec = group?.vectors.find(v => v.id === vid);
+            if (!vec || !vec.categories?.[catIndex]) return;
+            const cat = vec.categories[catIndex];
+            // Create inline color picker
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = cat.color;
+            input.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border:none;cursor:pointer;z-index:99999;padding:0';
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.2)';
+            overlay.onclick = () => { overlay.remove(); input.remove(); };
+            input.onchange = () => {
+                cat.color = input.value;
+                saveVectorGroups();
+                // Refresh layer colors
+                if (vectorLayers[vid]) { map.removeLayer(vectorLayers[vid]); delete vectorLayers[vid]; }
+                vectorVisibility[vid] = undefined;
+                toggleVector(gid, vid, true);
+                overlay.remove(); input.remove();
+            };
+            document.body.appendChild(overlay);
+            document.body.appendChild(input);
+            input.click();
         }
 
         function openVectorEditor(gid, vid) {
