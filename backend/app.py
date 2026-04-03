@@ -509,6 +509,7 @@ def upload_vector(project, gid):
             gpkg_path = os.path.join(VECTOR_DIR, fname)
             try:
                 r = sp.run(['ogrinfo', gpkg_path], capture_output=True, text=True, timeout=30)
+                app.logger.info(f'GPKG ogrinfo: rc={r.returncode} stdout={r.stdout[:500]} stderr={r.stderr[:200]}')
                 if r.returncode == 0:
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
@@ -518,42 +519,46 @@ def upload_vector(project, gid):
                             if layer_name and layer_name not in gpkg_layers:
                                 gpkg_layers.append(layer_name)
                     if not gpkg_layers:
-                        gpkg_layers = [None]  # fallback: ogr2ogr uses first layer
+                        gpkg_layers = [None]
+                    app.logger.info(f'GPKG layers: {gpkg_layers}')
                     gpkg_entries = []
                     for layer_name in gpkg_layers:
                         layer_vid = str(uuid.uuid4())[:8]
-                        # Convert GPKG layer to shapefile
                         out_dir = tempfile.mkdtemp()
                         out_shp = os.path.join(out_dir, f'{layer_vid}.shp')
                         cmd = ['ogr2ogr', '-f', 'ESRI Shapefile', out_shp, gpkg_path]
                         if layer_name:
                             cmd.append(layer_name)
                         cr = sp.run(cmd, capture_output=True, text=True, timeout=60)
+                        app.logger.info(f'GPKG convert {layer_name}: rc={cr.returncode} shp_exists={os.path.exists(out_shp)} stderr={cr.stderr[:300]}')
                         if cr.returncode != 0 or not os.path.exists(out_shp):
-                            print(f'GPKG layer {layer_name} conversion failed: {cr.stderr[:200]}')
                             continue
-                        # Move shapefile components to VECTOR_DIR
                         for ff in os.listdir(out_dir):
                             if ff.startswith(layer_vid):
-                                shutil.move(os.path.join(out_dir, ff), os.path.join(VECTOR_DIR, ff))
+                                dest = os.path.join(VECTOR_DIR, ff)
+                                shutil.copy2(os.path.join(out_dir, ff), dest)
                         shutil.rmtree(out_dir, ignore_errors=True)
+                        # Verify files were created
+                        created = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{layer_vid}_')]
+                        app.logger.info(f'GPKG layer {layer_name}: vid={layer_vid} files={created}')
+                        if not created:
+                            continue
                         layer_display = layer_name if layer_name else name
                         gpkg_entries.append({'id': layer_vid, 'name': f"{name}_{layer_display}"})
-                    # Register all converted layers
-                    for entry in gpkg_entries:
-                        for g in groups:
-                            if g['id'] == gid:
-                                g.setdefault('vectors', []).append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
-                                break
-                        results.append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
-                    with open(meta_path, 'w') as mf:
-                        json.dump(groups, mf)
-                    # Remove original GPKG file
-                    os.remove(gpkg_path)
-                    continue
+                    if gpkg_entries:
+                        for entry in gpkg_entries:
+                            for g in groups:
+                                if g['id'] == gid:
+                                    g.setdefault('vectors', []).append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
+                                    break
+                            results.append({'id': entry['id'], 'name': entry['name'], 'type': 'shp'})
+                        with open(meta_path, 'w') as mf:
+                            json.dump(groups, mf)
+                        os.remove(gpkg_path)
+                        continue
             except Exception as e:
-                print(f'GPKG conversion error: {e}')
-            # Fallback: treat as single vector
+                app.logger.error(f'GPKG conversion error: {e}')
+            # Fallback: treat as single GPKG vector
             for g in groups:
                 if g['id'] == gid:
                     g.setdefault('vectors', []).append({'id': vid, 'name': name, 'type': 'gpkg'})
