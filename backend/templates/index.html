@@ -1616,8 +1616,6 @@
             if (vtype==='line'||vtype==='polygon') {
                 document.getElementById('ve-weight').value = cat.weight??vec.weight??2;
                 document.getElementById('ve-weight-val').textContent = (cat.weight??vec.weight??2)+'px';
-                document.getElementById('ve-stroke-opacity').value = cat.strokeOpacity??vec.strokeOpacity??100;
-                document.getElementById('ve-stroke-opacity-val').textContent = (cat.strokeOpacity??vec.strokeOpacity??100)+'%';
             }
 
             // Stroke (polygon only)
@@ -1627,6 +1625,8 @@
                 const sc = cat.strokeColor||vec.strokeColor||'#333333';
                 document.getElementById('ve-stroke-picker').value = sc;
                 document.getElementById('ve-stroke-hex').value = sc;
+                document.getElementById('ve-stroke-opacity').value = (cat.strokeOpacity??vec.strokeOpacity??1)*100;
+                document.getElementById('ve-stroke-opacity-val').textContent = Math.round((cat.strokeOpacity??vec.strokeOpacity??1)*100)+'%';
                 const sg = document.getElementById('ve-stroke-color-grid');
                 sg.innerHTML = '';
                 VE_COLORS.forEach(c => {
@@ -1810,9 +1810,12 @@
             const strokeColor = document.getElementById('ve-stroke-picker').value;
             const strokeOp = parseInt(document.getElementById('ve-stroke-opacity').value)/100;
             const markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
-            const group = vectorGroups.find(g=>g.id===veEditGid);
-            const vec = group?.vectors.find(v=>v.id===veEditVid);
-            const vtype = detectVectorType(veEditGid, veEditVid);
+            // Support both vector editor and category editor
+            const egid = veEditGid || catEditGid;
+            const evid = veEditVid || catEditVid;
+            const group = vectorGroups.find(g=>g.id===egid);
+            const vec = group?.vectors.find(v=>v.id===evid);
+            const vtype = detectVectorType(egid, evid);
             const preview = document.getElementById('ve-preview');
             const opFill = document.getElementById('ve-opacity-fill');
             if (opFill) { opFill.style.background = color; opFill.style.opacity = op; }
