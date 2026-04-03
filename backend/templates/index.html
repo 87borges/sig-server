@@ -873,6 +873,7 @@
                     <span style="flex-shrink:0;font-size:0.85em">🗄️</span>
                     <span id="vgname_${g.id}" ondblclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" onclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
+                    <span onclick="downloadVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.5;font-size:0.75em;flex-shrink:0" title="Baixar grupo">💾</span>
                     <span onclick="deleteVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.75em;flex-shrink:0" title="Excluir grupo">🗑️</span>
                 `;
                 gdiv.appendChild(header);
@@ -930,6 +931,7 @@
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
                             <span onclick="zoomToVector('${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                             <span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Categorizar por atributo">🏷️</span>
+                            <span onclick="downloadVector('${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Baixar">💾</span>
                             <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
                         `;
                         gdiv.appendChild(row);
@@ -1128,6 +1130,14 @@
                     break;
                 }
             }
+        }
+
+        function downloadVector(vid) {
+            window.open(`/api/vector/${projetoAtual}/download/${vid}`, '_blank');
+        }
+
+        function downloadVectorGroup(gid) {
+            window.open(`/api/vector/${projetoAtual}/groups/${gid}/download`, '_blank');
         }
 
         function deleteVector(gid, vid) {

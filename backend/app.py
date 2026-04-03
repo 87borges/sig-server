@@ -510,6 +510,49 @@ def upload_vector(project, gid):
         json.dump(groups, mf)
     return jsonify({'success': True, 'vectors': results})
 
+@app.route('/api/vector/<project>/download/<vid>', methods=['GET'])
+def download_vector(project, vid):
+    """Download a single vector as zip with all its files."""
+    import zipfile, io
+    files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    if not files:
+        return jsonify({'error': 'Arquivo não encontrado'}), 404
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            zf.write(os.path.join(VECTOR_DIR, f), f)
+    buf.seek(0)
+    return (buf.getvalue(), 200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': f'attachment; filename="vector_{vid}.zip"'
+    })
+
+@app.route('/api/vector/<project>/groups/<gid>/download', methods=['GET'])
+def download_vector_group(project, gid):
+    """Download all vectors in a group as zip organized in folders."""
+    import zipfile, io, json
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    if not os.path.isfile(meta_path):
+        return jsonify({'error': 'Grupo não encontrado'}), 404
+    with open(meta_path) as mf:
+        groups = json.load(mf)
+    group = next((g for g in groups if g['id'] == gid), None)
+    if not group:
+        return jsonify({'error': 'Grupo não encontrado'}), 404
+    buf = io.BytesIO()
+    group_name = secure_filename(group.get('name', gid))
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for vec in group.get('vectors', []):
+            files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{vec['id']}_")]
+            if files:
+                for f in files:
+                    zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{f}")
+    buf.seek(0)
+    return (buf.getvalue(), 200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': f'attachment; filename="{group_name}.zip"'
+    })
+
 @app.route('/api/vector/<project>/geojson/<vid>/columns', methods=['GET'])
 def get_vector_columns(project, vid):
     """Convert vector to GeoJSON on-the-fly and return property columns with unique values."""
