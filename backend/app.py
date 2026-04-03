@@ -510,6 +510,32 @@ def upload_vector(project, gid):
         json.dump(groups, mf)
     return jsonify({'success': True, 'vectors': results})
 
+@app.route('/api/vector/<project>/geojson/<vid>/columns', methods=['GET'])
+def get_vector_columns(project, vid):
+    """Read GeoJSON and return available property columns with unique values."""
+    import json, glob
+    # Find geojson file
+    matches = glob.glob(os.path.join(VECTOR_DIR, f'{vid}_*.geojson'))
+    if not matches:
+        matches = glob.glob(os.path.join(VECTOR_DIR, f'{vid}_*.json'))
+    if not matches:
+        return jsonify({'error': 'GeoJSON não encontrado'}), 404
+    with open(matches[0]) as f:
+        gj = json.load(f)
+    columns = {}
+    for feat in gj.get('features', []):
+        props = feat.get('properties', {})
+        for k, v in props.items():
+            if v is None or isinstance(v, (dict, list)):
+                continue
+            if k not in columns:
+                columns[k] = set()
+            columns[k].add(str(v))
+    result = []
+    for k, vals in columns.items():
+        result.append({'name': k, 'values': sorted(vals), 'count': len(vals)})
+    return jsonify({'columns': result})
+
 @app.route('/api/vector/<project>/groups/<gid>/vector/<vid>', methods=['DELETE'])
 def delete_vector(project, gid, vid):
     import json

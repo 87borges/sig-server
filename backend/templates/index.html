@@ -163,6 +163,28 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Categorize Modal -->
+                    <div id="categorize-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:400px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                                <span style="font-weight:700;font-size:1.05em" id="cat-title">Categorizar vetor</span>
+                                <span onclick="closeCategorize()" style="cursor:pointer;font-size:1.2em;opacity:0.5;padding:0 4px">✕</span>
+                            </div>
+                            <div id="cat-loading" style="text-align:center;padding:20px;color:#888">Carregando atributos...</div>
+                            <div id="cat-content" style="display:none">
+                                <div style="font-size:0.8em;color:#666;margin-bottom:10px">Selecione a coluna de atributos para categorizar:</div>
+                                <div id="cat-columns" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+                            </div>
+                            <div id="cat-result" style="display:none">
+                                <div style="font-size:0.8em;color:#666;margin-bottom:10px" id="cat-result-info"></div>
+                                <div id="cat-categories" style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px;max-height:40vh;overflow-y:auto"></div>
+                                <div style="display:flex;gap:8px;justify-content:flex-end">
+                                    <button onclick="closeCategorize()" style="padding:6px 16px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.85em">Cancelar</button>
+                                    <button onclick="applyCategorize()" style="padding:6px 16px;border:none;border-radius:8px;background:#2c3e50;color:white;cursor:pointer;font-size:0.85em">Aplicar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Vector Style Editor Modal -->
                     <div id="vector-editor" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
                         <div style="background:white;border-radius:16px;padding:24px;width:340px;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
@@ -882,15 +904,27 @@
                         const vis = isVectorVisible(g.id, v.id);
                         const color = v.color || '#e74c3c';
                         const vtype = v._detectedType || 'polygon';
+                        const hasCat = v.categorized && v.categories && v.categories.length > 0;
                         let legendHtml = '';
-                        if (vtype === 'point') {
-                            const m = v.marker || '●'; const ms = v.markerSize || 16;
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
-                        } else if (vtype === 'line') {
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                        if (hasCat) {
+                            const shown = v.categories.slice(0, 3);
+                            const remaining = v.categories.length - 3;
+                            const items = shown.map(c => {
+                                if (vtype === 'point') return `<span style="font-size:10px;color:${c.color}">${v.marker||'●'}</span>`;
+                                if (vtype === 'line') return `<span style="display:inline-block;width:12px;height:2px;background:${c.color};vertical-align:middle;margin-right:1px"></span>`;
+                                return `<span style="display:inline-block;width:10px;height:10px;background:${c.color};border-radius:2px;vertical-align:middle;margin-right:1px"></span>`;
+                            }).join('');
+                            legendHtml = `<span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer" title="${v.categorizeColumn}">${items}${remaining > 0 ? '<span style="font-size:0.65em;color:#888">+'+remaining+'</span>' : ''}</span>`;
                         } else {
-                            const sc = v.strokeColor || '#333333'; const w = Math.min(v.weight||2, 3);
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                            if (vtype === 'point') {
+                                const m = v.marker || '●'; const ms = v.markerSize || 16;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
+                            } else if (vtype === 'line') {
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                            } else {
+                                const sc = v.strokeColor || '#333333'; const w = Math.min(v.weight||2, 3);
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                            }
                         }
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
@@ -898,6 +932,7 @@
                             <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
                             <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
+                            <span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Categorizar por atributo">🏷️</span>
                         `;
                         gdiv.appendChild(row);
                     });
@@ -1076,34 +1111,83 @@
                         }
                         console.log('Final geojson features:', geojson?.features?.length);
                         if (geojson && geojson.features && geojson.features.length > 0) {
-                            const color = vec.color || '#e74c3c';
-                            const opacity = vec.opacity ?? 0.6;
-                            const weight = vec.weight ?? 2;
-                            const strokeColor = vec.strokeColor || '#333333';
-                            const marker = vec.marker || '●';
-                            const markerSize = vec.markerSize || 16;
                             const isPoint = vec._detectedType === 'point';
                             const isLine = vec._detectedType === 'line';
-                            vectorLayers[vid] = L.geoJSON(geojson, {
-                                style: isPoint ? { opacity: opacity } : {
-                                    color: isLine ? color : strokeColor,
-                                    weight: weight,
-                                    fillColor: color,
-                                    fillOpacity: isLine ? 0 : opacity,
-                                    opacity: isLine ? opacity : 1
-                                },
-                                pointToLayer: isPoint ? (f, latlng) => {
-                                    return L.marker(latlng, {
-                                        icon: L.divIcon({
-                                            html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
-                                            className: '',
-                                            iconSize: [markerSize, markerSize],
-                                            iconAnchor: [markerSize/2, markerSize]
-                                        })
-                                    });
-                                } : null,
-                                onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
-                            }).addTo(map);
+                            const hasCategories = vec.categorized && vec.categories && vec.categories.length > 0;
+
+                            let layerOpts;
+                            if (hasCategories) {
+                                // Categorized style: color by property value
+                                const catMap = {};
+                                vec.categories.forEach(c => catMap[c.value] = c.color);
+                                const opacity = vec.opacity ?? 0.6;
+                                const weight = vec.weight ?? 2;
+                                const marker = vec.marker || '●';
+                                const markerSize = vec.markerSize || 16;
+
+                                layerOpts = {
+                                    style: (feature) => {
+                                        const val = String(feature.properties?.[vec.categorizeColumn] || '');
+                                        const color = catMap[val] || '#cccccc';
+                                        if (isPoint) return { opacity: opacity };
+                                        return {
+                                            color: isLine ? color : (vec.strokeColor || '#333333'),
+                                            weight: weight,
+                                            fillColor: color,
+                                            fillOpacity: isLine ? 0 : opacity,
+                                            opacity: isLine ? opacity : 1
+                                        };
+                                    },
+                                    pointToLayer: isPoint ? (f, latlng) => {
+                                        const val = String(f.properties?.[vec.categorizeColumn] || '');
+                                        const color = catMap[val] || '#cccccc';
+                                        return L.marker(latlng, {
+                                            icon: L.divIcon({
+                                                html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
+                                                className: '',
+                                                iconSize: [markerSize, markerSize],
+                                                iconAnchor: [markerSize/2, markerSize]
+                                            })
+                                        });
+                                    } : null,
+                                    onEachFeature: (f, l) => {
+                                        if (f.properties) {
+                                            const val = f.properties[vec.categorizeColumn] ? ` [${f.properties[vec.categorizeColumn]}]` : '';
+                                            l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados');
+                                        }
+                                    }
+                                };
+                            } else {
+                                // Single style (original)
+                                const color = vec.color || '#e74c3c';
+                                const opacity = vec.opacity ?? 0.6;
+                                const weight = vec.weight ?? 2;
+                                const strokeColor = vec.strokeColor || '#333333';
+                                const marker = vec.marker || '●';
+                                const markerSize = vec.markerSize || 16;
+
+                                layerOpts = {
+                                    style: isPoint ? { opacity: opacity } : {
+                                        color: isLine ? color : strokeColor,
+                                        weight: weight,
+                                        fillColor: color,
+                                        fillOpacity: isLine ? 0 : opacity,
+                                        opacity: isLine ? opacity : 1
+                                    },
+                                    pointToLayer: isPoint ? (f, latlng) => {
+                                        return L.marker(latlng, {
+                                            icon: L.divIcon({
+                                                html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
+                                                className: '',
+                                                iconSize: [markerSize, markerSize],
+                                                iconAnchor: [markerSize/2, markerSize]
+                                            })
+                                        });
+                                    } : null,
+                                    onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
+                                };
+                            }
+                            vectorLayers[vid] = L.geoJSON(geojson, layerOpts).addTo(map);
                             if (vectorLayers[vid].getLayers().length === 0) {
                                 alert('Vetor carregado mas sem geometrias visíveis.');
                             }
@@ -1146,6 +1230,102 @@
             if (t.includes('point') || t.includes('multipoint')) return 'point';
             if (t.includes('line') || t.includes('multiline')) return 'line';
             return 'polygon';
+        }
+
+        // ===== CATEGORIZE BY ATTRIBUTE =====
+        const CAT_PALETTE = [
+            '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e',
+            '#e84393','#00cec9','#6c5ce7','#fd79a8','#55efc4','#fab1a0','#74b9ff','#ffeaa7',
+            '#d63031','#0984e3','#00b894','#fdcb6e','#a29bfe','#00b5ad','#f19066','#636e72',
+            '#ff7675','#81ecec','#a29bfe','#636e72','#dfe6e9','#b2bec3','#c0392b','#2c3e50'
+        ];
+        let catGid = null, catVid = null, catColumn = null, catCategories = null;
+
+        async function openCategorize(gid, vid) {
+            catGid = gid; catVid = vid; catColumn = null; catCategories = null;
+            const group = vectorGroups.find(g => g.id === gid);
+            const vec = group?.vectors.find(v => v.id === vid);
+            if (!vec) return;
+            document.getElementById('cat-title').textContent = 'Categorizar: ' + vec.name;
+            document.getElementById('cat-loading').style.display = 'block';
+            document.getElementById('cat-content').style.display = 'none';
+            document.getElementById('cat-result').style.display = 'none';
+            document.getElementById('categorize-modal').style.display = 'flex';
+            try {
+                const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}/columns`);
+                if (!resp.ok) throw new Error('Erro ao ler atributos');
+                const data = await resp.json();
+                document.getElementById('cat-loading').style.display = 'none';
+                if (!data.columns || data.columns.length === 0) {
+                    document.getElementById('cat-content').innerHTML = '<div style="text-align:center;padding:20px;color:#888">Nenhuma coluna de atributos encontrada.</div>';
+                    document.getElementById('cat-content').style.display = 'block';
+                    return;
+                }
+                const colDiv = document.getElementById('cat-columns');
+                colDiv.innerHTML = '';
+                data.columns.forEach(col => {
+                    const btn = document.createElement('div');
+                    btn.style.cssText = 'padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer;font-size:0.85em;transition:all 0.15s;background:white';
+                    btn.innerHTML = `<span style="font-weight:600">${col.name}</span> <span style="color:#888;font-size:0.85em">(${col.count} valores)</span>`;
+                    btn.onmouseenter = () => { btn.style.background = '#f0f0f0'; btn.style.borderColor = '#2c3e50'; };
+                    btn.onmouseleave = () => { btn.style.background = 'white'; btn.style.borderColor = '#e0e0e0'; };
+                    btn.onclick = () => selectCatColumn(col.name, col.values);
+                    colDiv.appendChild(btn);
+                });
+                document.getElementById('cat-content').style.display = 'block';
+            } catch(e) {
+                document.getElementById('cat-loading').textContent = 'Erro: ' + e.message;
+            }
+        }
+
+        function selectCatColumn(colName, values) {
+            catColumn = colName;
+            catCategories = values.map((v, i) => ({ value: v, color: CAT_PALETTE[i % CAT_PALETTE.length] }));
+            document.getElementById('cat-content').style.display = 'none';
+            document.getElementById('cat-result').style.display = 'block';
+            document.getElementById('cat-result-info').textContent = `Coluna: "${colName}" — ${values.length} categorias`;
+            renderCatCategories();
+        }
+
+        function renderCatCategories() {
+            const div = document.getElementById('cat-categories');
+            div.innerHTML = '';
+            if (!catCategories) return;
+            catCategories.forEach((cat, i) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;transition:background 0.1s';
+                row.onmouseenter = () => row.style.background = '#f5f5f5';
+                row.onmouseleave = () => row.style.background = 'transparent';
+                row.innerHTML = `
+                    <input type="color" value="${cat.color}" style="width:28px;height:28px;border:none;cursor:pointer;border-radius:4px;padding:0" onchange="catCategories[${i}].color=this.value;renderCatCategories()">
+                    <span style="flex:1;font-size:0.85em">${cat.value}</span>
+                `;
+                div.appendChild(row);
+            });
+        }
+
+        async function applyCategorize() {
+            if (!catColumn || !catCategories) return;
+            const group = vectorGroups.find(g => g.id === catGid);
+            const vec = group?.vectors.find(v => v.id === catVid);
+            if (!vec) return;
+            // Save categorization to vector metadata
+            vec.categorized = true;
+            vec.categorizeColumn = catColumn;
+            vec.categories = catCategories.map(c => ({ value: c.value, color: c.color }));
+            saveVectorGroups();
+            // Remove current layer to force reload with categorized style
+            if (vectorLayers[catVid]) { map.removeLayer(vectorLayers[catVid]); delete vectorLayers[catVid]; }
+            // Force show with categorized style
+            vectorVisibility[catVid] = undefined; // reset so forceShow works
+            await toggleVector(catGid, catVid, true);
+            closeCategorize();
+            renderVectorMenu();
+        }
+
+        function closeCategorize() {
+            document.getElementById('categorize-modal').style.display = 'none';
+            catGid = null; catVid = null; catColumn = null; catCategories = null;
         }
 
         function openVectorEditor(gid, vid) {
