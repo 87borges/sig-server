@@ -249,8 +249,8 @@
                             <!-- Preview -->
                             <div id="ve-preview" style="margin-bottom:14px;text-align:center;padding:16px;background:#f5f5f5;border-radius:10px;min-height:60px;display:flex;align-items:center;justify-content:center"></div>
                             <div style="display:flex;gap:8px">
-                                <button onclick="cancelVectorEdit()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
-                                <button onclick="applyVectorEdit()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Aplicar</button>
+                                <button id="ve-cancel-btn" onclick="cancelVectorEdit()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
+                                <button id="ve-save-btn" onclick="applyVectorEdit()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Aplicar</button>
                             </div>
                         </div>
                     </div>
@@ -913,13 +913,7 @@
 
                         let legendHtml = '';
                         if (hasCat) {
-                            const items = v.categories.slice(0, 3).map(c => {
-                                if (vtype === 'point') return `<span style="font-size:10px;color:${c.color}">${v.marker||'●'}</span>`;
-                                if (vtype === 'line') return `<span style="display:inline-block;width:12px;height:2px;background:${c.color};vertical-align:middle;margin-right:1px"></span>`;
-                                return `<span style="display:inline-block;width:10px;height:10px;background:${c.color};border-radius:2px;vertical-align:middle;margin-right:1px"></span>`;
-                            }).join('');
-                            const remaining = v.categories.length - 3;
-                            legendHtml = `${items}${remaining > 0 ? '<span style="font-size:0.65em;color:#888">+'+remaining+'</span>' : ''}`;
+                            legendHtml = `<span onclick="toggleVectorCategoryCollapse('${v.id}')" style="cursor:pointer;font-size:0.95em;flex-shrink:0">${catCollapsed ? '📁' : '📂'}</span>`;
                         } else {
                             if (vtype === 'point') {
                                 const m = v.marker || '●'; const ms = v.markerSize || 16;
@@ -953,15 +947,21 @@
                                 const subrow = document.createElement('div');
                                 subrow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 12px 2px 52px;font-size:0.68em';
                                 let catLegend = '';
-                                if (vtype === 'point') catLegend = `<span style="font-size:10px;color:${cat.color}">${v.marker||'●'}</span>`;
-                                else if (vtype === 'line') catLegend = `<span style="display:inline-block;width:14px;height:3px;background:${cat.color};border-radius:1px;vertical-align:middle"></span>`;
-                                else catLegend = `<span style="display:inline-block;width:12px;height:10px;background:${cat.color};border-radius:2px;vertical-align:middle"></span>`;
+                                if (vtype === 'point') {
+                                    const m = cat.marker || v.marker || '●';
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:${Math.min(cat.markerSize||v.markerSize||16,14)}px;color:${cat.color}">${m}</span>`;
+                                } else if (vtype === 'line') {
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:14px;height:3px;background:${cat.color};border-radius:1px;vertical-align:middle"></span>`;
+                                } else {
+                                    const sc = cat.strokeColor || v.strokeColor || '#333333';
+                                    const w = Math.min(cat.weight || v.weight || 2, 3);
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:12px;height:10px;background:${cat.color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                                }
 
                                 subrow.innerHTML = `
                                     <span id="cateye_${catKey}" onclick="toggleVectorCategory('${v.id}',${ci})" style="cursor:pointer;font-size:0.8em;flex-shrink:0;user-select:none">${catVis ? '👁️' : '🙈'}</span>
                                     ${catLegend}
                                     <span style="flex:1;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
-                                    <span onclick="editCategoryColor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Editar cor">✏️</span>
                                 `;
                                 gdiv.appendChild(subrow);
                             });
@@ -1148,13 +1148,11 @@
 
                             let layerOpts;
                             if (hasCategories) {
-                                // Categorized style: color by property value
+                                // Categorized style: each category has full style properties
                                 const catMap = {};
-                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, index: ci });
-                                const opacity = vec.opacity ?? 0.6;
-                                const weight = vec.weight ?? 2;
-                                const marker = vec.marker || '●';
-                                const markerSize = vec.markerSize || 16;
+                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, marker: c.marker, markerSize: c.markerSize, index: ci });
+                                const isPoint = vec._detectedType === 'point';
+                                const isLine = vec._detectedType === 'line';
 
                                 layerOpts = {
                                     style: (feature) => {
@@ -1163,14 +1161,13 @@
                                         if (!cat) return { opacity: 0, fillOpacity: 0 };
                                         const catKey = `${vec.id}_${cat.index}`;
                                         if (vectorCategoryVisibility[catKey] === false) return { opacity: 0, fillOpacity: 0 };
-                                        const color = cat.color;
-                                        if (isPoint) return { opacity: opacity };
+                                        if (isPoint) return { opacity: cat.opacity ?? 0.6 };
                                         return {
-                                            color: isLine ? color : (vec.strokeColor || '#333333'),
-                                            weight: weight,
-                                            fillColor: color,
-                                            fillOpacity: isLine ? 0 : opacity,
-                                            opacity: isLine ? opacity : 1
+                                            color: isLine ? cat.color : (cat.strokeColor || '#333333'),
+                                            weight: cat.weight || 2,
+                                            fillColor: cat.color,
+                                            fillOpacity: isLine ? 0 : (cat.opacity ?? 0.6),
+                                            opacity: isLine ? (cat.opacity ?? 0.6) : 1
                                         };
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
@@ -1179,13 +1176,14 @@
                                         if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
                                         const catKey = `${vec.id}_${cat.index}`;
                                         if (vectorCategoryVisibility[catKey] === false) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
-                                        const color = cat.color;
+                                        const mkr = cat.marker || '●';
+                                        const msz = cat.markerSize || 16;
                                         return L.marker(latlng, {
                                             icon: L.divIcon({
-                                                html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
+                                                html: `<span style="font-size:${msz}px;color:${cat.color};opacity:${cat.opacity??0.6}">${mkr}</span>`,
                                                 className: '',
-                                                iconSize: [markerSize, markerSize],
-                                                iconAnchor: [markerSize/2, markerSize]
+                                                iconSize: [msz, msz],
+                                                iconAnchor: [msz/2, msz]
                                             })
                                         });
                                     } : null,
@@ -1318,7 +1316,15 @@
 
         function selectCatColumn(colName, values) {
             catColumn = colName;
-            catCategories = values.map((v, i) => ({ value: v, color: CAT_PALETTE[i % CAT_PALETTE.length] }));
+            catCategories = values.map((v, i) => ({
+                value: v,
+                color: CAT_PALETTE[i % CAT_PALETTE.length],
+                opacity: 0.6,
+                weight: 2,
+                strokeColor: '#333333',
+                marker: '●',
+                markerSize: 16
+            }));
             document.getElementById('cat-content').style.display = 'none';
             document.getElementById('cat-result').style.display = 'block';
             document.getElementById('cat-result-info').textContent = `Coluna: "${colName}" — ${values.length} categorias`;
@@ -1347,10 +1353,17 @@
             const group = vectorGroups.find(g => g.id === catGid);
             const vec = group?.vectors.find(v => v.id === catVid);
             if (!vec) return;
-            // Save categorization to vector metadata
+            // Use vector's current style as base for categories
+            catCategories.forEach(c => {
+                c.opacity = vec.opacity ?? 0.6;
+                c.weight = vec.weight ?? 2;
+                c.strokeColor = vec.strokeColor || '#333333';
+                c.marker = vec.marker || '●';
+                c.markerSize = vec.markerSize || 16;
+            });
             vec.categorized = true;
             vec.categorizeColumn = catColumn;
-            vec.categories = catCategories.map(c => ({ value: c.value, color: c.color }));
+            vec.categories = JSON.parse(JSON.stringify(catCategories));
             saveVectorGroups();
             // Remove current layer to force reload with categorized style
             if (vectorLayers[catVid]) { map.removeLayer(vectorLayers[catVid]); delete vectorLayers[catVid]; }
@@ -1402,31 +1415,131 @@
             renderVectorMenu();
         }
 
-        function editCategoryColor(gid, vid, catIndex) {
+        let catEditGid = null, catEditVid = null, catEditIndex = null;
+
+        function openCategoryEditor(gid, vid, catIndex) {
+            catEditGid = gid; catEditVid = vid; catEditIndex = catIndex;
             const group = vectorGroups.find(g => g.id === gid);
             const vec = group?.vectors.find(v => v.id === vid);
             if (!vec || !vec.categories?.[catIndex]) return;
             const cat = vec.categories[catIndex];
-            // Create inline color picker
-            const input = document.createElement('input');
-            input.type = 'color';
-            input.value = cat.color;
-            input.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;border:none;cursor:pointer;z-index:99999;padding:0';
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.2)';
-            overlay.onclick = () => { overlay.remove(); input.remove(); };
-            input.onchange = () => {
-                cat.color = input.value;
-                saveVectorGroups();
-                // Refresh layer colors
-                if (vectorLayers[vid]) { map.removeLayer(vectorLayers[vid]); delete vectorLayers[vid]; }
-                vectorVisibility[vid] = undefined;
-                toggleVector(gid, vid, true);
-                overlay.remove(); input.remove();
-            };
-            document.body.appendChild(overlay);
-            document.body.appendChild(input);
-            input.click();
+            const vtype = vec._detectedType || detectVectorType(gid, vid);
+
+            // Reuse the vector editor but with category title
+            document.getElementById('ve-title').textContent = cat.value;
+            const typeLabels = {polygon:'Polígono',line:'Linha',point:'Ponto'};
+            document.getElementById('ve-type').textContent = `Categoria — Tipo: ` + (typeLabels[vtype]||vtype);
+
+            // Color
+            const color = cat.color || '#e74c3c';
+            document.getElementById('ve-color-picker').value = color;
+            document.getElementById('ve-color-hex').value = color;
+            const grid = document.getElementById('ve-color-grid');
+            grid.innerHTML = '';
+            VE_COLORS.forEach(c => {
+                const d = document.createElement('div');
+                d.style.cssText = `width:16px;height:16px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===color?'#333':'transparent'}`;
+                d.onclick = () => { document.getElementById('ve-color-picker').value=c; document.getElementById('ve-color-hex').value=c; updateCatPreview(); grid.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                grid.appendChild(d);
+            });
+            document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
+
+            // Opacity
+            const op = Math.round((cat.opacity??0.6)*100);
+            document.getElementById('ve-opacity').value = op;
+            document.getElementById('ve-opacity-val').textContent = op+'%';
+            document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
+            document.getElementById('ve-opacity-fill').style.background = color;
+            document.getElementById('ve-opacity-fill').style.opacity = op/100;
+
+            // Weight
+            const ws = document.getElementById('ve-weight-section');
+            ws.style.display = (vtype==='line'||vtype==='polygon')?'block':'none';
+            if (vtype==='line'||vtype==='polygon') {
+                document.getElementById('ve-weight').value = cat.weight??vec.weight??2;
+                document.getElementById('ve-weight-val').textContent = (cat.weight??vec.weight??2)+'px';
+            }
+
+            // Stroke (polygon only)
+            const ss = document.getElementById('ve-stroke-section');
+            ss.style.display = vtype==='polygon'?'block':'none';
+            if (vtype==='polygon') {
+                const sc = cat.strokeColor||vec.strokeColor||'#333333';
+                document.getElementById('ve-stroke-picker').value = sc;
+                document.getElementById('ve-stroke-hex').value = sc;
+                const sg = document.getElementById('ve-stroke-color-grid');
+                sg.innerHTML = '';
+                VE_COLORS.forEach(c => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:14px;height:14px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===sc?'#333':'transparent'}`;
+                    d.onclick = () => { document.getElementById('ve-stroke-picker').value=c; document.getElementById('ve-stroke-hex').value=c; updateCatPreview(); sg.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                    sg.appendChild(d);
+                });
+            }
+
+            // Markers (point only)
+            const ms = document.getElementById('ve-marker-section');
+            ms.style.display = vtype==='point'?'block':'none';
+            if (vtype==='point') {
+                const mg = document.getElementById('ve-markers-grid');
+                mg.innerHTML = '';
+                const selM = cat.marker||vec.marker||'●';
+                VE_MARKERS.forEach(m => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border-radius:6px;border:2px solid ${m===selM?'#333':'#ddd'};background:${m===selM?'#f0f0f0':'white'}`;
+                    d.textContent = m;
+                    d.onclick = () => { mg.querySelectorAll('div').forEach(x=>{x.style.borderColor='#ddd';x.style.background='white'}); d.style.borderColor='#333'; d.style.background='#f0f0f0'; vec._selMarker=m; updateCatPreview(); };
+                    if(m===selM){d.style.borderColor='#333';d.style.background='#f0f0f0';}
+                    mg.appendChild(d);
+                });
+                document.getElementById('ve-marker-size').value = cat.markerSize||vec.markerSize||16;
+                document.getElementById('ve-marker-size-val').textContent = (cat.markerSize||vec.markerSize||16)+'px';
+            }
+
+            // Events
+            document.getElementById('ve-color-picker').oninput = e => { document.getElementById('ve-color-hex').value=e.target.value; updateCatPreview(); };
+            document.getElementById('ve-color-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-color-picker').value=e.target.value; updateCatPreview();} };
+            document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateCatPreview(); };
+            document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateCatPreview(); };
+            document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateCatPreview(); };
+            document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateCatPreview();} };
+            document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateCatPreview(); };
+
+            // Override save for category editing
+            const saveBtn = document.getElementById('ve-save-btn');
+            if (saveBtn) saveBtn.onclick = () => saveCategoryStyle();
+            const cancelBtn = document.getElementById('ve-cancel-btn');
+            if (cancelBtn) cancelBtn.onclick = () => document.getElementById('vector-editor').style.display = 'none';
+
+            updateCatPreview();
+            document.getElementById('vector-editor').style.display = 'flex';
+        }
+
+        function updateCatPreview() {
+            // Reuse same preview logic as updateVePreview but for category
+            updateVePreview();
+        }
+
+        function saveCategoryStyle() {
+            const group = vectorGroups.find(g => g.id === catEditGid);
+            const vec = group?.vectors.find(v => v.id === catEditVid);
+            if (!vec || !vec.categories?.[catEditIndex]) return;
+            const cat = vec.categories[catEditIndex];
+
+            cat.color = document.getElementById('ve-color-picker').value;
+            cat.opacity = parseInt(document.getElementById('ve-opacity').value) / 100;
+            cat.weight = parseInt(document.getElementById('ve-weight').value) || 2;
+            cat.strokeColor = document.getElementById('ve-stroke-picker').value;
+            cat.marker = vec._selMarker || cat.marker || '●';
+            cat.markerSize = parseInt(document.getElementById('ve-marker-size').value) || 16;
+
+            saveVectorGroups();
+            // Refresh layer
+            if (vectorLayers[catEditVid]) { map.removeLayer(vectorLayers[catEditVid]); delete vectorLayers[catEditVid]; }
+            vectorVisibility[catEditVid] = undefined;
+            toggleVector(catEditGid, catEditVid, true);
+            document.getElementById('vector-editor').style.display = 'none';
+            renderVectorMenu();
         }
 
         function openVectorEditor(gid, vid) {
@@ -1434,6 +1547,11 @@
             const vec = group?.vectors.find(v => v.id === vid);
             if (!vec) return;
             veEditGid = gid; veEditVid = vid;
+            // Reset button handlers to vector edit mode
+            const saveBtn = document.getElementById('ve-save-btn');
+            const cancelBtn = document.getElementById('ve-cancel-btn');
+            if (saveBtn) saveBtn.onclick = () => applyVectorEdit();
+            if (cancelBtn) cancelBtn.onclick = () => cancelVectorEdit();
             veEditBackup = JSON.parse(JSON.stringify(vec));
             const vtype = detectVectorType(gid, vid);
 
