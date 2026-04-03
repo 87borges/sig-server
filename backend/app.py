@@ -512,9 +512,10 @@ def upload_vector(project, gid):
                 if r.returncode == 0:
                     gpkg_layers = []
                     for line in r.stdout.split('\n'):
-                        m = re.match(r'^(\d+):\s+(\S+)', line.strip())
+                        stripped = line.strip()
+                        m = re.match(r'^(\d+):\s+(.+?)\s*\(', stripped)
                         if m:
-                            layer_name = m.group(2).strip('(')
+                            layer_name = m.group(2).strip()
                             if layer_name and layer_name not in gpkg_layers:
                                 gpkg_layers.append(layer_name)
                     if not gpkg_layers:
@@ -922,9 +923,9 @@ def list_gpkg_layers(project, vid):
         layers = []
         import re
         for line in r.stdout.split('\n'):
-            m = re.match(r'^(\d+):\s+(\S+)', line.strip())
+            m = re.match(r'^(\d+):\s+(.+?)\s*\(', line.strip())
             if m:
-                layer_name = m.group(2).strip('(')
+                layer_name = m.group(2).strip()
                 if layer_name: layers.append(layer_name)
         return jsonify({'layers': layers, 'is_gpkg': True})
     except:
