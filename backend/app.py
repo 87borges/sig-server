@@ -517,14 +517,28 @@ def download_vector(project, vid):
     files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
     if not files:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
+    # Find vector name from groups metadata
+    import json
+    meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+    vec_name = vid
+    if os.path.isfile(meta_path):
+        with open(meta_path) as mf:
+            groups = json.load(mf)
+        for g in groups:
+            for v in g.get('vectors', []):
+                if v['id'] == vid:
+                    vec_name = secure_filename(v.get('name', vid))
+                    break
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for f in files:
-            zf.write(os.path.join(VECTOR_DIR, f), f)
+            # Strip vid_ prefix from filename
+            clean_name = f[len(vid)+1:]
+            zf.write(os.path.join(VECTOR_DIR, f), clean_name)
     buf.seek(0)
     return (buf.getvalue(), 200, {
         'Content-Type': 'application/zip',
-        'Content-Disposition': f'attachment; filename="vector_{vid}.zip"'
+        'Content-Disposition': f'attachment; filename="{vec_name}.zip"'
     })
 
 @app.route('/api/vector/<project>/groups/<gid>/download', methods=['GET'])
@@ -544,9 +558,10 @@ def download_vector_group(project, gid):
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
         for vec in group.get('vectors', []):
             files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{vec['id']}_")]
-            if files:
-                for f in files:
-                    zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{f}")
+            vec_name = secure_filename(vec.get('name', vec['id']))
+            for f in files:
+                clean_name = f[len(vec['id'])+1:]
+                zf.write(os.path.join(VECTOR_DIR, f), f"{group_name}/{vec_name}/{clean_name}")
     buf.seek(0)
     return (buf.getvalue(), 200, {
         'Content-Type': 'application/zip',
