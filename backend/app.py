@@ -592,10 +592,12 @@ def download_vector(project, vid):
                     break
     if not files:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
-    # Find vector name from groups metadata
-    import json
+    # Find vector name and GPKG info from groups metadata
+    import json, subprocess, tempfile
     meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
     vec_name = vid
+    gpkg_layer = None
+    gpkg_file = None
     if os.path.isfile(meta_path):
         with open(meta_path) as mf:
             groups = json.load(mf)
@@ -603,13 +605,26 @@ def download_vector(project, vid):
             for v in g.get('vectors', []):
                 if v['id'] == vid:
                     vec_name = secure_filename(v.get('name', vid))
+                    gpkg_layer = v.get('gpkg_layer')
+                    if v.get('gpkg_vid'):
+                        gpkg_file = next((os.path.join(VECTOR_DIR, f) for f in os.listdir(VECTOR_DIR) if f.startswith(f"{v['gpkg_vid']}_") and f.endswith('.gpkg')), None)
                     break
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for f in files:
-            # Strip vid_ prefix from filename
-            clean_name = f[len(vid)+1:]
-            zf.write(os.path.join(VECTOR_DIR, f), clean_name)
+        # If GPKG layer, convert only this layer to GeoJSON
+        if gpkg_file and gpkg_layer:
+            tmpdir = tempfile.mkdtemp()
+            out_geojson = os.path.join(tmpdir, f'{vec_name}.geojson')
+            cmd = ['ogr2ogr', '-f', 'GeoJSON', '-t_srs', 'EPSG:4326', out_geojson, gpkg_file, gpkg_layer]
+            cr = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if cr.returncode == 0 and os.path.exists(out_geojson):
+                zf.write(out_geojson, f'{vec_name}.geojson')
+            import shutil
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        else:
+            for f in files:
+                clean_name = f[len(vid)+1:]
+                zf.write(os.path.join(VECTOR_DIR, f), clean_name)
     buf.seek(0)
     return (buf.getvalue(), 200, {
         'Content-Type': 'application/zip',
