@@ -525,7 +525,7 @@ def upload_vector(project, gid):
                     for layer_name in gpkg_layers:
                         layer_vid = str(uuid.uuid4())[:8]
                         layer_display = layer_name if layer_name else name
-                        out_geojson = os.path.join(VECTOR_DIR, f'{layer_vid}.geojson')
+                        out_geojson = os.path.join(VECTOR_DIR, f'{layer_vid}_layer.geojson')
                         cmd = ['ogr2ogr', '-f', 'GeoJSON', out_geojson, gpkg_path]
                         if layer_name:
                             cmd.append(layer_name)
