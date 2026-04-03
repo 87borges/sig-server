@@ -575,8 +575,21 @@ def upload_vector(project, gid):
 @app.route('/api/vector/<project>/download/<vid>', methods=['GET'])
 def download_vector(project, vid):
     """Download a single vector as zip with all its files."""
-    import zipfile, io
+    import zipfile, io, json
     files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f'{vid}_')]
+    # If GPKG layer, look up gpkg_vid
+    if not files:
+        meta_path = os.path.join(VECTOR_DIR, f'{project}_groups.json')
+        if os.path.isfile(meta_path):
+            with open(meta_path) as mf:
+                groups = json.load(mf)
+            for g in groups:
+                for v in g.get('vectors', []):
+                    if v['id'] == vid and v.get('gpkg_vid'):
+                        files = [f for f in os.listdir(VECTOR_DIR) if f.startswith(f"{v['gpkg_vid']}_")]
+                        break
+                if files:
+                    break
     if not files:
         return jsonify({'error': 'Arquivo não encontrado'}), 404
     # Find vector name from groups metadata
@@ -721,15 +734,32 @@ def delete_vector(project, gid, vid):
     if os.path.isfile(meta_path):
         with open(meta_path) as mf:
             groups = json.load(mf)
+        gpkg_vid = None
         for g in groups:
             if g['id'] == gid:
                 for v in g.get('vectors', []):
                     if v['id'] == vid:
+                        gpkg_vid = v.get('gpkg_vid')
+                        # Delete layer-specific files if any
                         for old in os.listdir(VECTOR_DIR):
                             if old.startswith(f'{vid}_'):
                                 os.remove(os.path.join(VECTOR_DIR, old))
                         g['vectors'] = [vv for vv in g['vectors'] if vv['id'] != vid]
                         break
+                # If this was a GPKG layer, check if other layers still use the same GPKG file
+                if gpkg_vid:
+                    still_used = False
+                    for g in groups:
+                        for v in g.get('vectors', []):
+                            if v.get('gpkg_vid') == gpkg_vid:
+                                still_used = True
+                                break
+                        if still_used:
+                            break
+                    if not still_used:
+                        for old in os.listdir(VECTOR_DIR):
+                            if old.startswith(f'{gpkg_vid}_'):
+                                os.remove(os.path.join(VECTOR_DIR, old))
         with open(meta_path, 'w') as mf:
             json.dump(groups, mf)
     return jsonify({'success': True})
