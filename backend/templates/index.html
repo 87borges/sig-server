@@ -557,27 +557,19 @@
                 const gdiv = document.createElement('div');
                 gdiv.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.1)';
                 gdiv.draggable = true;
-                gdiv.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-group', gid:g.id}));
-                    gdiv.style.opacity = '0.4';
-                });
-                gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
-                gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
-                gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
-                gdiv.addEventListener('drop', e => {
-                    e.preventDefault(); gdiv.style.borderTop = '';
-                    try {
-                        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                makeDraggable(gdiv,
+                    () => ({type:'raster-group', gid:g.id}),
+                    (from) => {
                         if (from.type !== 'raster-group') return;
                         const fromIdx = rasterGroups.findIndex(x => x.id === from.gid);
-                        const toIdx = rasterGroups.findIndex(x => x.id === g.id);
-                        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+                        if (fromIdx < 0) return;
                         const [moved] = rasterGroups.splice(fromIdx, 1);
-                        const newToIdx = rasterGroups.findIndex(x => x.id === g.id);
-                        rasterGroups.splice(newToIdx, 0, moved);
+                        const toIdx = rasterGroups.findIndex(x => x.id === g.id);
+                        if (toIdx < 0) return;
+                        rasterGroups.splice(toIdx, 0, moved);
                         saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
-                    } catch(err) {}
-                });
+                    }
+                );
                 const groupVis = rasterGroupVisibility[g.id] !== false;
                 const header = document.createElement('div');
                 header.className = 'basemap-row';
@@ -598,28 +590,21 @@
                         row.className = 'basemap-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
                         row.draggable = true;
-                        row.addEventListener('dragstart', e => {
-                            e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-item', gid:g.id, rid:r.id}));
-                            row.style.opacity = '0.4';
-                        });
-                        row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-                        row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
-                        row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
-                        row.addEventListener('drop', e => {
-                            e.preventDefault(); row.style.borderTop = '';
-                            try {
-                                const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        makeDraggable(row,
+                            () => ({type:'raster-item', gid:g.id, rid:r.id}),
+                            (from) => {
                                 if (from.type !== 'raster-item' || from.gid !== g.id) return;
                                 const grp = rasterGroups.find(x => x.id === g.id);
+                                if (!grp) return;
                                 const fromIdx = grp.rasters.findIndex(x => x.id === from.rid);
-                                const toIdx = grp.rasters.findIndex(x => x.id === r.id);
-                                if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+                                if (fromIdx < 0) return;
                                 const [moved] = grp.rasters.splice(fromIdx, 1);
-                                const newToIdx = grp.rasters.findIndex(x => x.id === r.id);
-                                grp.rasters.splice(newToIdx, 0, moved);
+                                const toIdx = grp.rasters.findIndex(x => x.id === r.id);
+                                if (toIdx < 0) return;
+                                grp.rasters.splice(toIdx, 0, moved);
                                 saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
-                            } catch(err) {}
-                        });
+                            }
+                        );
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
                             <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
@@ -853,27 +838,19 @@
                 const gdiv = document.createElement('div');
                 gdiv.style.cssText = 'border-bottom:1px solid rgba(128,128,128,0.15)';
                 gdiv.draggable = true;
-                gdiv.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({type:'vector-group', gid:g.id}));
-                    gdiv.style.opacity = '0.4';
-                });
-                gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
-                gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid #999'; });
-                gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
-                gdiv.addEventListener('drop', e => {
-                    e.preventDefault(); gdiv.style.borderTop = '';
-                    try {
-                        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                makeDraggable(gdiv,
+                    () => ({type:'vector-group', gid:g.id}),
+                    (from) => {
                         if (from.type !== 'vector-group') return;
                         const fromIdx = vectorGroups.findIndex(x => x.id === from.gid);
-                        const toIdx = vectorGroups.findIndex(x => x.id === g.id);
-                        if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+                        if (fromIdx < 0) return;
                         const [moved] = vectorGroups.splice(fromIdx, 1);
-                        const newToIdx = vectorGroups.findIndex(x => x.id === g.id);
-                        vectorGroups.splice(newToIdx, 0, moved);
+                        const toIdx = vectorGroups.findIndex(x => x.id === g.id);
+                        if (toIdx < 0) return;
+                        vectorGroups.splice(toIdx, 0, moved);
                         saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
-                    } catch(err) {}
-                });
+                    }
+                );
                 const groupVis = vectorGroupVisibility[g.id] !== false;
                 const header = document.createElement('div');
                 header.className = 'basemap-row';
@@ -900,29 +877,21 @@
                         row.className = 'basemap-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
                         row.draggable = true;
-                        row.addEventListener('dragstart', e => {
-                            e.dataTransfer.setData('text/plain', JSON.stringify({gid:g.id, vid:v.id}));
-                            row.style.opacity = '0.4';
-                        });
-                        row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-                        row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid #999'; });
-                        row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
-                        row.addEventListener('drop', e => {
-                            e.preventDefault(); row.style.borderTop = '';
-                            try {
-                                const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        makeDraggable(row,
+                            () => ({gid:g.id, vid:v.id}),
+                            (from) => {
                                 if (from.gid !== g.id) return;
                                 const grp = vectorGroups.find(x => x.id === g.id);
                                 if (!grp) return;
                                 const fromIdx = grp.vectors.findIndex(x => x.id === from.vid);
-                                const toIdx = grp.vectors.findIndex(x => x.id === v.id);
-                                if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+                                if (fromIdx < 0) return;
                                 const [moved] = grp.vectors.splice(fromIdx, 1);
-                                const newToIdx = grp.vectors.findIndex(x => x.id === v.id);
-                                grp.vectors.splice(newToIdx, 0, moved);
+                                const toIdx = grp.vectors.findIndex(x => x.id === v.id);
+                                if (toIdx < 0) return;
+                                grp.vectors.splice(toIdx, 0, moved);
                                 saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
-                            } catch(err) {}
-                        });
+                            }
+                        );
 
                         let legendHtml = '';
                         if (hasCat) {
@@ -1042,26 +1011,54 @@
             });
         }
 
+        // ===== DRAG & DROP HELPER =====
+        function makeDraggable(el, getDragData, onDrop) {
+            let dragCounter = 0;
+            el.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', JSON.stringify(getDragData()));
+                el.style.opacity = '0.4';
+            });
+            el.addEventListener('dragend', () => { el.style.opacity = '1'; });
+            el.addEventListener('dragenter', e => { e.preventDefault(); dragCounter++; el.style.borderTop = '2px solid #999'; });
+            el.addEventListener('dragover', e => { e.preventDefault(); });
+            el.addEventListener('dragleave', () => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; el.style.borderTop = ''; } });
+            el.addEventListener('drop', e => {
+                e.preventDefault(); dragCounter = 0; el.style.borderTop = '';
+                try {
+                    const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    onDrop(from);
+                } catch(err) {}
+            });
+        }
+
+        // ===== ZOOM HELPERS =====
+        function extendBoundsFromLayer(bounds, layer) {
+            try {
+                if (layer.getBounds) {
+                    const b = layer.getBounds();
+                    if (b.isValid()) bounds.extend(b);
+                } else if (layer.getLatLng) {
+                    bounds.extend(layer.getLatLng());
+                }
+            } catch(e) {}
+        }
+
         function zoomToVectorCategory(vid, catIndex) {
-            // Need to ensure vector is loaded
             if (!vectorLayers[vid]) return;
             const bounds = L.latLngBounds([]);
             for (const g of vectorGroups) {
                 const vec = g.vectors?.find(v => v.id === vid);
                 if (vec?.categories?.[catIndex]) {
                     const catVal = vec.categories[catIndex].value;
-                    // Check visible layers
                     vectorLayers[vid].eachLayer(layer => {
                         if (String(layer.feature?.properties?.[vec.categorizeColumn] || '') === catVal) {
-                            try { bounds.extend(layer.getBounds()); } catch(e) {}
+                            extendBoundsFromLayer(bounds, layer);
                         }
                     });
-                    // Check hidden layers for this category
                     const catKey = `${vid}_${catIndex}`;
-                    const hidden = vectorCategoryHiddenLayers[catKey] || [];
-                    hidden.forEach(layer => {
+                    (vectorCategoryHiddenLayers[catKey] || []).forEach(layer => {
                         if (String(layer.feature?.properties?.[vec.categorizeColumn] || '') === catVal) {
-                            try { bounds.extend(layer.getBounds()); } catch(e) {}
+                            extendBoundsFromLayer(bounds, layer);
                         }
                     });
                     break;
@@ -1071,7 +1068,6 @@
         }
 
         async function zoomToVector(vid) {
-            // If not loaded yet, find and load it first
             if (!vectorLayers[vid]) {
                 for (const g of vectorGroups) {
                     const vec = g.vectors?.find(v => v.id === vid);
@@ -1084,7 +1080,8 @@
             }
             if (vectorLayers[vid]) {
                 try {
-                    const bounds = vectorLayers[vid].getBounds();
+                    const bounds = L.latLngBounds([]);
+                    vectorLayers[vid].eachLayer(layer => extendBoundsFromLayer(bounds, layer));
                     if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
                 } catch(e) {}
             }
