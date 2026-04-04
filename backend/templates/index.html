@@ -296,6 +296,51 @@
         let projetoAtual = null;
         let map, baseLayer = null, overlays = {}, baseLayerType = 'google_sat';
 
+        // ===== CUSTOM SYMBOL MARKER (draws text on canvas/SVG like paths) =====
+        L.SymbolMarker = L.CircleMarker.extend({
+            options: { symbol: '●', symbolSize: 16 },
+            _updatePath: function() {
+                if (!this._renderer) return;
+                const r = this._renderer;
+                const p = this._point;
+                if (!p) return;
+                if (r._ctx) {
+                    // Canvas renderer
+                    const ctx = r._ctx;
+                    const s = this.options.symbolSize || 16;
+                    ctx.save();
+                    ctx.font = s + 'px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = this.options.color || '#ffffff';
+                    ctx.globalAlpha = this.options.fillOpacity ?? this.options.opacity ?? 1;
+                    ctx.fillText(this.options.symbol || '●', p.x, p.y);
+                    ctx.restore();
+                } else {
+                    // SVG renderer fallback
+                    if (!this._path) this._path = L.SVG.create('text');
+                    const s = this.options.symbolSize || 16;
+                    this._path.setAttribute('x', p.x);
+                    this._path.setAttribute('y', p.y);
+                    this._path.setAttribute('font-size', s);
+                    this._path.setAttribute('text-anchor', 'middle');
+                    this._path.setAttribute('dominant-baseline', 'central');
+                    this._path.setAttribute('fill', this.options.color || '#ffffff');
+                    this._path.setAttribute('opacity', this.options.fillOpacity ?? this.options.opacity ?? 1);
+                    this._path.textContent = this.options.symbol || '●';
+                    if (!this._path.parentNode) r._rootGroup.appendChild(this._path);
+                }
+            },
+            _containsPoint: function(p) {
+                const s = this.options.symbolSize || 16;
+                const r = s / 2 + 4;
+                return p.distanceTo(this._point) <= r;
+            },
+            setSymbol: function(sym) { this.options.symbol = sym; return this.redraw(); },
+            setSymbolSize: function(sz) { this.options.symbolSize = sz; return this.redraw(); }
+        });
+        L.symbolMarker = function(latlng, opts) { return new L.SymbolMarker(latlng, opts); };
+
         // ===== MAPA =====
         function initMap() {
             map = L.map('map', { zoomControl: true }).setView([-15.78, -47.93], 10);
@@ -1357,16 +1402,16 @@
                                     pointToLayer: isPoint ? (f, latlng) => {
                                         const val = String(f.properties?.[vec.categorizeColumn] || '');
                                         const cat = catMap[val];
-                                        if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }), pane: 'overlayPane' });
+                                        if (!cat) return L.symbolMarker(latlng, { radius: 1, symbol: '', symbolSize: 1, color: 'transparent', opacity: 0 });
                                         const mkr = cat.marker || '●';
                                         const msz = cat.markerSize || 16;
-                                        return L.marker(latlng, {
-                                            icon: L.divIcon({
-                                                html: `<span style="font-size:${msz}px;color:${cat.color};opacity:${cat.opacity??1}">${mkr}</span>`,
-                                                className: '',
-                                                iconSize: [msz, msz],
-                                                iconAnchor: [msz/2, msz]
-                                            })
+                                        return L.symbolMarker(latlng, {
+                                            radius: msz / 2 + 4,
+                                            symbol: mkr,
+                                            symbolSize: msz,
+                                            color: cat.color,
+                                            opacity: cat.opacity ?? 1
+                                        });
                                         });
                                     } : null,
                                     onEachFeature: (f, l) => {
