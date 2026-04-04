@@ -2010,14 +2010,18 @@
         }
 
         function refreshVectorZOrder() {
-            // Last group in list renders on top; within each group, last vector renders on top
-            vectorGroups.forEach(g => {
-                g.vectors.forEach(v => {
+            // Top of list = top of map (like QGIS)
+            // Process first-to-last so last item processed ends up on top via bringToFront
+            // => need reverse: first in list should be last to call bringToFront
+            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
+                const g = vectorGroups[gi];
+                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
+                    const v = g.vectors[vi];
                     if (vectorLayers[v.id] && vectorVisibility[v.id]) {
                         vectorLayers[v.id].bringToFront();
                     }
-                });
-            });
+                }
+            }
         }
 
         async function autoShowExistingVectors() {
