@@ -1973,7 +1973,7 @@
 
         function cancelVectorEdit() { closeVectorEditor(); }
 
-        function applyVectorEdit() {
+        async function applyVectorEdit() {
             const group = vectorGroups.find(g=>g.id===veEditGid);
             const vec = group?.vectors.find(v=>v.id===veEditVid);
             if (!vec) { closeVectorEditor(); return; }
