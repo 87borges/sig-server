@@ -1448,13 +1448,12 @@
                                         dashArray: scaleDashArray(vec.dash, weight)
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
-                                        return L.marker(latlng, {
-                                            icon: L.divIcon({
-                                                html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
-                                                className: '',
-                                                iconSize: [markerSize, markerSize],
-                                                iconAnchor: [markerSize/2, markerSize]
-                                            })
+                                        return L.symbolMarker(latlng, {
+                                            radius: markerSize / 2 + 4,
+                                            symbol: marker,
+                                            symbolSize: markerSize,
+                                            color: color,
+                                            opacity: opacity
                                         });
                                     } : null,
                                     onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
