@@ -1716,9 +1716,10 @@
             if (vtype==='line'||vtype==='polygon') {
                 document.getElementById('ve-weight').value = cat.weight??vec.weight??2;
                 document.getElementById('ve-weight-val').textContent = (cat.weight??vec.weight??2)+'px';
-                document.getElementById('ve-stroke-opacity').value = cat.strokeOpacity??vec.strokeOpacity??100;
-                document.getElementById('ve-stroke-opacity-val').textContent = (cat.strokeOpacity??vec.strokeOpacity??100)+'%';
-                document.getElementById('ve-stroke-opacity-fill').style.opacity = (cat.strokeOpacity??vec.strokeOpacity??100)/100;
+                const strokeOpVal = cat.strokeOpacity!=null ? Math.round(cat.strokeOpacity*100) : (vec.strokeOpacity!=null ? Math.round(vec.strokeOpacity*100) : 100);
+                document.getElementById('ve-stroke-opacity').value = strokeOpVal;
+                document.getElementById('ve-stroke-opacity-val').textContent = strokeOpVal+'%';
+                document.getElementById('ve-stroke-opacity-fill').style.opacity = strokeOpVal/100;
             }
             // Dash pattern (line and polygon)
             const ds = document.getElementById('ve-dash-section');
