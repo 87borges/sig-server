@@ -2016,14 +2016,15 @@
 
         function refreshVectorZOrder() {
             // QGIS: top of list = top of map
-            // bringToFront adds to top of DOM; so we call it bottom-to-top order
-            // so the top item gets the final bringToFront and renders on top
+            // Process bottom-to-top so top item gets final bringToFront
             for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
                 const g = vectorGroups[gi];
                 for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
                     const v = g.vectors[vi];
                     if (vectorLayers[v.id]) {
-                        vectorLayers[v.id].bringToFront();
+                        vectorLayers[v.id].eachLayer(l => {
+                            if (l.bringToFront) l.bringToFront();
+                        });
                     }
                 }
             }
