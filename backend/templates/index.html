@@ -1293,7 +1293,7 @@
                             if (hasCategories) {
                                 // Categorized style: each category has full style properties
                                 const catMap = {};
-                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, strokeOpacity: c.strokeOpacity, marker: c.marker, markerSize: c.markerSize, index: ci });
+                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, strokeOpacity: c.strokeOpacity, marker: c.marker, markerSize: c.markerSize, dash: c.dash, index: ci });
                                 const isPoint = vec._detectedType === 'point';
                                 const isLine = vec._detectedType === 'line';
 
