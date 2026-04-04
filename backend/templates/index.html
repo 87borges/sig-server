@@ -1417,9 +1417,12 @@
             return `<svg width="${width}" height="${height}" style="display:block"><line x1="0" y1="${height/2}" x2="${width}" y2="${height/2}" stroke="${color||'#333'}" stroke-width="2"${da}/></svg>`;
         }
 
+        let _currentDashValue = null;
+
         function initDashDropdown(currentVal, onChange) {
             const btn = document.getElementById('ve-dash-btn');
             const opts = document.getElementById('ve-dash-options');
+            _currentDashValue = currentVal;
             const sel = VE_DASHES.find(d => d.value === currentVal) || VE_DASHES[0];
             btn.innerHTML = dashSvg(sel.value, '#333', 120, 16) + `<span style="font-size:0.8em;color:#666;margin-left:auto">${sel.name}</span>`;
             btn.onclick = (e) => { e.stopPropagation(); opts.style.display = opts.style.display==='none'?'block':'none'; };
@@ -1431,7 +1434,7 @@
                 item.innerHTML = dashSvg(d.value, '#333', 80, 12) + `<span>${d.name}</span>`;
                 item.onmouseenter = () => item.style.background='#f5f5f5';
                 item.onmouseleave = () => item.style.background='white';
-                item.onclick = (e) => { e.stopPropagation(); opts.style.display='none'; btn.innerHTML = dashSvg(d.value, '#333', 120, 16) + `<span style="font-size:0.8em;color:#666;margin-left:auto">${d.name}</span>`; onChange(d.value); };
+                item.onclick = (e) => { e.stopPropagation(); opts.style.display='none'; _currentDashValue = d.value; btn.innerHTML = dashSvg(d.value, '#333', 120, 16) + `<span style="font-size:0.8em;color:#666;margin-left:auto">${d.name}</span>`; onChange(d.value); };
                 opts.appendChild(item);
             });
         }
@@ -1738,7 +1741,6 @@
         }
 
         function updateCatPreview() {
-            // Reuse same preview logic as updateVePreview but for category
             updateVePreview();
         }
 
@@ -1883,7 +1885,7 @@
             const evid = veEditVid || catEditVid;
             const group = vectorGroups.find(g=>g.id===egid);
             const vec = group?.vectors.find(v=>v.id===evid);
-            const vtype = detectVectorType(egid, evid);
+            const vtype = vec?._detectedType || detectVectorType(egid, evid);
             const preview = document.getElementById('ve-preview');
             const opFill = document.getElementById('ve-opacity-fill');
             if (opFill) { opFill.style.background = color; opFill.style.opacity = op; }
@@ -1892,7 +1894,7 @@
                 const m = vec?._selMarker || vec?.marker || '●';
                 preview.innerHTML = `<span style="font-size:${markerSize}px;color:${color};opacity:${op}">${m}</span>`;
             } else if (vtype==='line') {
-                const selDash = vec?._selDash;
+                const selDash = _currentDashValue;
                 const h = Math.max(2, Math.min(weight, 10));
                 const da = selDash ? ` stroke-dasharray="${selDash}"` : '';
                 preview.innerHTML = `<svg width="100%" height="${h+8}" style="display:block"><line x1="0" y1="${(h+8)/2}" x2="100%" y2="${(h+8)/2}" stroke="${color}" stroke-width="${h}" opacity="${op}"${da}/></svg>`;
