@@ -2010,8 +2010,9 @@
         }
 
         function refreshVectorZOrder() {
+            // Last group in list renders on top; within each group, last vector renders on top
             vectorGroups.forEach(g => {
-                g.vectors.slice().reverse().forEach(v => {
+                g.vectors.forEach(v => {
                     if (vectorLayers[v.id] && vectorVisibility[v.id]) {
                         vectorLayers[v.id].bringToFront();
                     }
