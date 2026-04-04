@@ -876,7 +876,7 @@
                         const toIdx = vectorGroups.findIndex(x => x.id === g.id);
                         if (toIdx < 0) return;
                         vectorGroups.splice(toIdx, 0, moved);
-                        saveVectorGroups(); renderVectorMenu(); setTimeout(refreshVectorZOrder, 50);
+                        saveVectorGroups(); renderVectorMenu();
                     }
                 );
                 const groupVis = vectorGroupVisibility[g.id] !== false;
@@ -919,7 +919,7 @@
                                 const toIdx = grp.vectors.findIndex(x => x.id === v.id);
                                 if (toIdx < 0) return;
                                 grp.vectors.splice(toIdx, 0, moved);
-                                saveVectorGroups(); renderVectorMenu(); setTimeout(refreshVectorZOrder, 50);
+                                saveVectorGroups(); renderVectorMenu();
                             }
                         );
 
@@ -2012,19 +2012,18 @@
 
         function refreshVectorZOrder() {
             // QGIS: top of list = top of map
-            // Canvas renderer: bringToFront moves layer to end of draw list
-            // Process bottom-to-top so first item in list gets final bringToFront = top of map
-            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
-                const g = vectorGroups[gi];
-                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
-                    const v = g.vectors[vi];
+            // Collect all visible layers in list order
+            const ordered = [];
+            for (const g of vectorGroups) {
+                for (const v of g.vectors) {
                     if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
-                        vectorLayers[v.id].eachLayer(l => {
-                            if (l.bringToFront) l.bringToFront();
-                        });
+                        ordered.push(vectorLayers[v.id]);
                     }
                 }
             }
+            // Remove all, then re-add in order (first added = bottom, last added = top)
+            ordered.forEach(l => map.removeLayer(l));
+            ordered.forEach(l => map.addLayer(l));
         }
 
         async function autoShowExistingVectors() {
