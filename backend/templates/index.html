@@ -1025,7 +1025,7 @@
                 }
                 list.appendChild(gdiv);
             });
-            refreshVectorZOrder();
+            requestAnimationFrame(() => refreshVectorZOrder());
         }
 
         function toggleVectorGroupCollapse(gid) {
@@ -2011,19 +2011,16 @@
         }
 
         function refreshVectorZOrder() {
-            // QGIS behavior: top of list = top of map
-            // Assign zIndex: first group/vector gets highest z, last gets lowest
-            let zIndex = vectorGroups.length * 1000;
-            for (const g of vectorGroups) {
-                zIndex -= g.vectors.length * 10;
-                for (const v of g.vectors) {
+            // QGIS: top of list = top of map
+            // bringToFront adds to top of DOM; so we call it bottom-to-top order
+            // so the top item gets the final bringToFront and renders on top
+            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
+                const g = vectorGroups[gi];
+                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
+                    const v = g.vectors[vi];
                     if (vectorLayers[v.id]) {
-                        vectorLayers[v.id].eachLayer(l => {
-                            if (l.setStyle) l.setStyle({ ...l.options, zIndex: zIndex });
-                            else if (l.setZIndex) l.setZIndex(zIndex);
-                        });
+                        vectorLayers[v.id].bringToFront();
                     }
-                    zIndex += 10;
                 }
             }
         }
