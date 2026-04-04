@@ -1334,6 +1334,7 @@
                                 const isLine = vec._detectedType === 'line';
 
                                 layerOpts = {
+                                    pane: 'overlayPane',
                                     style: (feature) => {
                                         const val = String(feature.properties?.[vec.categorizeColumn] || '');
                                         const cat = catMap[val];
@@ -1357,10 +1358,11 @@
                                     pointToLayer: isPoint ? (f, latlng) => {
                                         const val = String(f.properties?.[vec.categorizeColumn] || '');
                                         const cat = catMap[val];
-                                        if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }) });
+                                        if (!cat) return L.marker(latlng, { icon: L.divIcon({ html: '', className: '', iconSize: [0,0] }), pane: 'overlayPane' });
                                         const mkr = cat.marker || '●';
                                         const msz = cat.markerSize || 16;
                                         return L.marker(latlng, {
+                                            pane: 'overlayPane',
                                             icon: L.divIcon({
                                                 html: `<span style="font-size:${msz}px;color:${cat.color};opacity:${cat.opacity??1}">${mkr}</span>`,
                                                 className: '',
@@ -1394,6 +1396,7 @@
                                 }
 
                                 layerOpts = {
+                                    pane: 'overlayPane',
                                     style: isPoint ? { opacity: opacity } : {
                                         color: isLine ? color : hexToRgba(strokeColor, strokeOpacity),
                                         weight: weight,
@@ -1404,6 +1407,7 @@
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
                                         return L.marker(latlng, {
+                                            pane: 'overlayPane',
                                             icon: L.divIcon({
                                                 html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
                                                 className: '',
