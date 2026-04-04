@@ -1025,7 +1025,7 @@
                 }
                 list.appendChild(gdiv);
             });
-            requestAnimationFrame(() => refreshVectorZOrder());
+            refreshVectorZOrder();
         }
 
         function toggleVectorGroupCollapse(gid) {
@@ -2016,17 +2016,18 @@
 
         function refreshVectorZOrder() {
             // QGIS: top of list = top of map
-            // Remove all vector layers and re-add in order so last added = top
-            const layers = [];
-            for (const g of vectorGroups) {
-                for (const v of g.vectors) {
+            // Process bottom-to-top: last item in list calls bringToFront last = renders on top
+            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
+                const g = vectorGroups[gi];
+                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
+                    const v = g.vectors[vi];
                     if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
-                        layers.push({ id: v.id, layer: vectorLayers[v.id] });
+                        vectorLayers[v.id].eachLayer(l => {
+                            if (l.bringToFront) l.bringToFront();
+                        });
                     }
                 }
             }
-            layers.forEach(l => map.removeLayer(l.layer));
-            layers.forEach(l => map.addLayer(l.layer));
         }
 
         async function autoShowExistingVectors() {
