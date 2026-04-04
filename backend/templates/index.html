@@ -2016,25 +2016,17 @@
 
         function refreshVectorZOrder() {
             // QGIS: top of list = top of map
-            // Reorder the actual DOM containers of each layer group
-            const pane = map.getPane('overlayPane');
-            if (!pane) return;
-            const container = pane.querySelector('.leaflet-layer-group') || pane;
-            // Collect visible layer groups in order (top of list first)
-            const groups = [];
+            // Remove all vector layers and re-add in order so last added = top
+            const layers = [];
             for (const g of vectorGroups) {
                 for (const v of g.vectors) {
-                    if (vectorLayers[v.id]) {
-                        const el = vectorLayers[v.id]._container || vectorLayers[v.id]._pathContainer;
-                        if (el) groups.push(el);
+                    if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
+                        layers.push({ id: v.id, layer: vectorLayers[v.id] });
                     }
                 }
             }
-            // Append in order: first item = bottom, last = top (DOM order)
-            // Since we want top of list = top of map, reverse so last appended = top of list
-            groups.reverse().forEach(el => {
-                if (el.parentNode === pane) pane.appendChild(el);
-            });
+            layers.forEach(l => map.removeLayer(l.layer));
+            layers.forEach(l => map.addLayer(l.layer));
         }
 
         async function autoShowExistingVectors() {
