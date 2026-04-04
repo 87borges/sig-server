@@ -1973,7 +1973,7 @@
 
         function cancelVectorEdit() { closeVectorEditor(); }
 
-        async function applyVectorEdit() {
+        function applyVectorEdit() {
             const group = vectorGroups.find(g=>g.id===veEditGid);
             const vec = group?.vectors.find(v=>v.id===veEditVid);
             if (!vec) { closeVectorEditor(); return; }
@@ -2005,7 +2005,6 @@
                 }
             }
             closeVectorEditor();
-            await loadVectorGroups();
             renderVectorMenu();
         }
 
