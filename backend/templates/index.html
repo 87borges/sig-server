@@ -1361,7 +1361,7 @@
                                         const msz = cat.markerSize || 16;
                                         return L.marker(latlng, {
                                             icon: L.divIcon({
-                                                html: `<span style="font-size:${msz}px;color:${cat.color};opacity:${cat.opacity??0.6}">${mkr}</span>`,
+                                                html: `<span style="font-size:${msz}px;color:${cat.color};opacity:${cat.opacity??1}">${mkr}</span>`,
                                                 className: '',
                                                 iconSize: [msz, msz],
                                                 iconAnchor: [msz/2, msz]
@@ -1607,7 +1607,7 @@
             if (!vec) return;
             // Use vector's current style as base for categories
             catCategories.forEach(c => {
-                c.opacity = vec.opacity ?? 0.5;
+                c.opacity = vec.opacity ?? 1;
                 c.weight = vec.weight ?? 2;
                 c.strokeColor = vec.strokeColor || '#333333';
                 c.marker = vec.marker || '●';
@@ -1703,7 +1703,7 @@
             document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
 
             // Opacity
-            const op = Math.round((cat.opacity??0.6)*100);
+            const op = Math.round((cat.opacity??1)*100);
             document.getElementById('ve-opacity').value = op;
             document.getElementById('ve-opacity-val').textContent = op+'%';
             document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
@@ -1844,7 +1844,7 @@
             document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
 
             // Opacity
-            const op = Math.round((vec.opacity??0.6)*100);
+            const op = Math.round((vec.opacity??1)*100);
             document.getElementById('ve-opacity').value = op;
             document.getElementById('ve-opacity-val').textContent = op+'%';
             document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
