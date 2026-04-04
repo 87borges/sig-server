@@ -1300,7 +1300,7 @@
                                             return `rgba(${r},${g},${b},${alpha})`;
                                         }
                                         return {
-                                            color: isLine ? cat.color : hexToRgba(cat.strokeColor || '#333333', cat.strokeOpacity ?? 1),
+                                            color: isLine ? hexToRgba(cat.color, cat.opacity ?? 0.5) : hexToRgba(cat.strokeColor || '#333333', cat.strokeOpacity ?? 1),
                                             weight: cat.weight ?? 2,
                                             fillColor: cat.color,
                                             fillOpacity: isLine ? 0 : (cat.opacity ?? 0.5),
@@ -1817,9 +1817,11 @@
             const strokeColor = document.getElementById('ve-stroke-picker').value;
             
             const markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
-            const group = vectorGroups.find(g=>g.id===veEditGid);
-            const vec = group?.vectors.find(v=>v.id===veEditVid);
-            const vtype = detectVectorType(veEditGid, veEditVid);
+            const egid = veEditGid || catEditGid;
+            const evid = veEditVid || catEditVid;
+            const group = vectorGroups.find(g=>g.id===egid);
+            const vec = group?.vectors.find(v=>v.id===evid);
+            const vtype = detectVectorType(egid, evid);
             const preview = document.getElementById('ve-preview');
             const opFill = document.getElementById('ve-opacity-fill');
             if (opFill) { opFill.style.background = color; opFill.style.opacity = op; }
