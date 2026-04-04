@@ -876,7 +876,7 @@
                         const toIdx = vectorGroups.findIndex(x => x.id === g.id);
                         if (toIdx < 0) return;
                         vectorGroups.splice(toIdx, 0, moved);
-                        saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
+                        saveVectorGroups(); renderVectorMenu();
                     }
                 );
                 const groupVis = vectorGroupVisibility[g.id] !== false;
@@ -919,7 +919,7 @@
                                 const toIdx = grp.vectors.findIndex(x => x.id === v.id);
                                 if (toIdx < 0) return;
                                 grp.vectors.splice(toIdx, 0, moved);
-                                saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
+                                saveVectorGroups(); renderVectorMenu();
                             }
                         );
 
@@ -1025,6 +1025,7 @@
                 }
                 list.appendChild(gdiv);
             });
+            refreshVectorZOrder();
         }
 
         function toggleVectorGroupCollapse(gid) {
@@ -2010,16 +2011,19 @@
         }
 
         function refreshVectorZOrder() {
-            // Top of list = top of map (like QGIS)
-            // Process first-to-last so last item processed ends up on top via bringToFront
-            // => need reverse: first in list should be last to call bringToFront
-            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
-                const g = vectorGroups[gi];
-                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
-                    const v = g.vectors[vi];
-                    if (vectorLayers[v.id] && vectorVisibility[v.id]) {
-                        vectorLayers[v.id].bringToFront();
+            // QGIS behavior: top of list = top of map
+            // Assign zIndex: first group/vector gets highest z, last gets lowest
+            let zIndex = vectorGroups.length * 1000;
+            for (const g of vectorGroups) {
+                zIndex -= g.vectors.length * 10;
+                for (const v of g.vectors) {
+                    if (vectorLayers[v.id]) {
+                        vectorLayers[v.id].eachLayer(l => {
+                            if (l.setStyle) l.setStyle({ ...l.options, zIndex: zIndex });
+                            else if (l.setZIndex) l.setZIndex(zIndex);
+                        });
                     }
+                    zIndex += 10;
                 }
             }
         }
