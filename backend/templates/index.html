@@ -877,6 +877,21 @@
                         if (toIdx < 0) return;
                         vectorGroups.splice(toIdx, 0, moved);
                         saveVectorGroups(); renderVectorMenu(); setTimeout(refreshVectorZOrder, 50);
+// FORCE REORDER: remove all vector layers and re-add in list order
+setTimeout(() => {
+    let allLayers = [];
+    for (let gi = 0; gi < vectorGroups.length; gi++) {
+        for (let vi = 0; vi < vectorGroups[gi].vectors.length; vi++) {
+            const vid = vectorGroups[gi].vectors[vi].id;
+            if (vectorLayers[vid] && map.hasLayer(vectorLayers[vid])) {
+                allLayers.push(vectorLayers[vid]);
+            }
+        }
+    }
+    allLayers.forEach(l => map.removeLayer(l));
+    allLayers.forEach(l => map.addLayer(l));
+    console.log('FORCE REORDER: moved', allLayers.length, 'layers');
+}, 100);
                     }
                 );
                 const groupVis = vectorGroupVisibility[g.id] !== false;
@@ -920,6 +935,21 @@
                                 if (toIdx < 0) return;
                                 grp.vectors.splice(toIdx, 0, moved);
                                 saveVectorGroups(); renderVectorMenu(); setTimeout(refreshVectorZOrder, 50);
+// FORCE REORDER: remove all vector layers and re-add in list order
+setTimeout(() => {
+    let allLayers = [];
+    for (let gi = 0; gi < vectorGroups.length; gi++) {
+        for (let vi = 0; vi < vectorGroups[gi].vectors.length; vi++) {
+            const vid = vectorGroups[gi].vectors[vi].id;
+            if (vectorLayers[vid] && map.hasLayer(vectorLayers[vid])) {
+                allLayers.push(vectorLayers[vid]);
+            }
+        }
+    }
+    allLayers.forEach(l => map.removeLayer(l));
+    allLayers.forEach(l => map.addLayer(l));
+    console.log('FORCE REORDER: moved', allLayers.length, 'layers');
+}, 100);
                             }
                         );
 
