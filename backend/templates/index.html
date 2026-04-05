@@ -2183,5 +2183,34 @@ setTimeout(() => {
 
         
     </script>
-</body>
+
+<!-- BOTAO TESTE Z-ORDER -->
+<button onclick="testZOrder()" style="position:fixed;bottom:20px;right:20px;z-index:99999;background:red;color:white;padding:15px 25px;border:none;border-radius:10px;cursor:pointer;font-size:16px;font-weight:bold;box-shadow:0 4px 15px rgba(0,0,0,0.4)">🔄 Z-ORDER</button>
+<script>
+function testZOrder() {
+    alert("Teste Z-Order!\n\nCamadas encontradas: " + Object.keys(vectorLayers).length + "\n\nVeja o Console (F12) para detalhes.");
+    
+    let info = "Ordem na lista:\n";
+    let layers = [];
+    
+    for (let gi = 0; gi < vectorGroups.length; gi++) {
+        for (let vi = 0; vi < vectorGroups[gi].vectors.length; vi++) {
+            let v = vectorGroups[gi].vectors[vi];
+            if (vectorLayers[v.id]) {
+                info += "[" + gi + "," + vi + "] " + v.name + "\n";
+                layers.push(vectorLayers[v.id]);
+            }
+        }
+    }
+    
+    console.log(info);
+    console.log("Total layers:", layers.length);
+    
+    // Tentar reordenar
+    layers.forEach(l => map.removeLayer(l));
+    layers.forEach(l => map.addLayer(l));
+    
+    console.log("Reordenacao executada!");
+}
+</script></body>
 </html>
