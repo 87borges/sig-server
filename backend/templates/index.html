@@ -1415,7 +1415,7 @@
                                     onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
                                 };
                             }
-                            vectorLayers[vid] = L.geoJSON(geojson, {...layerOpts, renderer: L.canvas()}).addTo(map);
+                            vectorLayers[vid] = L.geoJSON(geojson, {...layerOpts, renderer: L.svg()}).addTo(map);
                             saveVectorGroups();
                         } else {
                             alert('Não foi possível converter o vetor. Formato: ' + vec.type);
