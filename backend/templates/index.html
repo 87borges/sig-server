@@ -2022,7 +2022,67 @@
             renderVectorMenu();
         }
 
-        function refreshVectorZOrder() {
+                function refreshVectorZOrder() {
+            console.log('%c=== REFRESH VECTOR Z-ORDER ===', 'color:blue;font-size:14px');
+            
+            // Mostrar estado atual de vectorGroups
+            console.log('📋 Ordem atual em vectorGroups:');
+            for (let gi = 0; gi < vectorGroups.length; gi++) {
+                const g = vectorGroups[gi];
+                console.log(`  Grupo ${gi}: ${g.name}`);
+                for (let vi = 0; vi < g.vectors.length; vi++) {
+                    const v = g.vectors[vi];
+                    const hasLayer = !!vectorLayers[v.id];
+                    console.log(`    [${vi}] ${v.name} (id:${v.id}) hasLayer:${hasLayer}`);
+                }
+            }
+            
+            // Verificar pane do Leaflet
+            const pane = document.querySelector('.leaflet-overlay-pane');
+            console.log('🗺️ Pane encontrado:', !!pane);
+            if (pane) {
+                console.log('   Filhos no pane:', pane.children.length);
+                for (let i = 0; i < Math.min(pane.children.length, 10); i++) {
+                    const child = pane.children[i];
+                    console.log(`   [${i}]`, child.tagName, child.className?.substring(0,50) || '');
+                }
+            }
+            
+            // Tentar reordenar via DOM
+            let orderedLayers = [];
+            for (let gi = 0; gi < vectorGroups.length; gi++) {
+                const g = vectorGroups[gi];
+                for (let vi = 0; vi < g.vectors.length; vi++) {
+                    const v = g.vectors[vi];
+                    if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
+                        orderedLayers.push({ vid: v.id, name: v.name, layer: vectorLayers[v.id] });
+                    }
+                }
+            }
+            console.log('⚡ Camadas para reordenar:', orderedLayers.length);
+            orderedLayers.forEach((item, idx) => console.log(`   [${idx}] ${item.name}`));
+            
+            // Método 1: appendChild no DOM
+            if (pane) {
+                orderedLayers.forEach((item, idx) => {
+                    item.layer.eachLayer(l => {
+                        const el = l.getElement();
+                        if (el) {
+                            console.log(`   Movendo [${idx}] ${item.name}, element:`, el.tagName, el.className?.substring(0,30));
+                            if (el.parentNode === pane) {
+                                pane.appendChild(el);
+                            } else {
+                                console.log(`      ⚠️ Pai não é pane! Pai:`, el.parentNode?.className);
+                            }
+                        } else {
+                            console.log(`   [${idx}] ${item.name} sem getElement()`);
+                        }
+                    });
+                });
+            }
+            
+            console.log('%c=== FIM REFRESH ===', 'color:blue');
+        }
             // QGIS: top of list = top of map
             // Canvas renderer: bringToFront moves layer to end of draw list
             // Process bottom-to-top so first item in list gets final bringToFront = top of map
