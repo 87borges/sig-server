@@ -1,67 +1,57 @@
-// Z-Order Fix v5 - Interceptor Inteligente com Delay
-console.log('[Z-Order v5] Iniciado');
+// Z-Order Fix v6 - Patch Completo do applyVectorEdit
+console.log('[Z-Order v6] Iniciado');
 
-let reorderTimeout = null;
-
-function scheduleReorder() {
-    // Cancelar agendamento anterior
-    if (reorderTimeout) clearTimeout(reorderTimeout);
+function patchApplyVectorEdit() {
+    if (typeof applyVectorEdit === 'undefined') {
+        setTimeout(patchApplyVectorEdit, 1000);
+        return;
+    }
     
-    // Agendar novo reordenamento em 800ms
-    // (tempo suficiente para toggle/edicao completar)
-    reorderTimeout = setTimeout(function() {
-        if (typeof refreshVectorZOrder === 'function') {
-            console.log('[Z-Order v5] Executando refreshVectorZOrder');
-            refreshVectorZOrder();
-        }
-    }, 800);
-}
-
-// Interceptar addLayer do mapa
-if (typeof map !== 'undefined') {
-    const originalAddLayer = map.addLayer.bind(map);
-    map.addLayer = function(layer) {
-        const result = originalAddLayer(layer);
-        scheduleReorder();
+    const originalApplyVectorEdit = applyVectorEdit;
+    
+    window.applyVectorEdit = function() {
+        const result = originalApplyVectorEdit.apply(this, arguments);
+        
+        setTimeout(function() {
+            if (typeof refreshVectorZOrder === 'function') {
+                refreshVectorZOrder();
+            }
+        }, 500);
+        
         return result;
     };
-    console.log('[Z-Order v5] map.addLayer interceptado');
+    
+    console.log('[Z-Order v6] Patch applyVectorEdit aplicado!');
 }
 
-// Interceptar removeLayer tambem
-if (typeof map !== 'undefined') {
-    const originalRemoveLayer = map.removeLayer.bind(map);
-    map.removeLayer = function(layer) {
-        const result = originalRemoveLayer(layer);
-        scheduleReorder();
-        return result;
-    };
-    console.log('[Z-Order v5] map.removeLayer interceptado');
-}
+setTimeout(patchApplyVectorEdit, 2000);
 
-// Sobrescrever toggleVector para agendar reordenacao
-if (typeof window.toggleVector === 'function') {
+function patchToggleVector() {
+    if (typeof window.toggleVector === 'undefined') {
+        setTimeout(patchToggleVector, 1500);
+        return;
+    }
+    
     const originalToggleVector = window.toggleVector;
     window.toggleVector = function() {
         const result = originalToggleVector.apply(this, arguments);
-        scheduleReorder();
+        setTimeout(function() {
+            if (typeof refreshVectorZOrder === 'function') {
+                refreshVectorZOrder();
+            }
+        }, 500);
         return result;
     };
-    console.log('[Z-Order v5] toggleVector interceptado');
+    
+    console.log('[Z-Order v6] Patch toggleVector aplicado!');
 }
 
-// Backup: rodar a cada 3 segundos tambem
+setTimeout(patchToggleVector, 2500);
+
 setInterval(function() {
     if (typeof refreshVectorZOrder === 'function') {
         refreshVectorZOrder();
     }
 }, 3000);
 
-// Executar assim que carregar
-setTimeout(function() {
-    if (typeof refreshVectorZOrder === 'function') {
-        refreshVectorZOrder();
-    }
-}, 2000);
-
-console.log('[Z-Order v5] Ativo com delay inteligente!');
+console.log('[Z-Order v6] Ativo!');
