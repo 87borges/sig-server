@@ -2023,7 +2023,29 @@
             renderVectorMenu();
         }
 
-        function refreshVectorZOrder() { alert("DEBUG: refreshVectorZOrder() FOI CHAMADO!"); console.log("=== refreshVectorZOrder() CHAMADO ===");
+        function refreshVectorZOrder() {
+            // DOM manipulation approach: reorder SVG elements directly
+            let orderedLayers = [];
+            for (let gi = 0; gi < vectorGroups.length; gi++) {
+                const g = vectorGroups[gi];
+                for (let vi = 0; vi < g.vectors.length; vi++) {
+                    const v = g.vectors[vi];
+                    if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
+                        orderedLayers.push(vectorLayers[v.id]);
+                    }
+                }
+            }
+            const pane = document.querySelector('.leaflet-overlay-pane');
+            if (!pane) return;
+            orderedLayers.forEach(layer => {
+                layer.eachLayer(l => {
+                    const el = l.getElement();
+                    if (el && el.parentNode === pane) {
+                        pane.appendChild(el);
+                    }
+                });
+            });
+        }
             // Reorder layers physically on map based on list position
             // First in list = bottom of map, Last in list = top of map
             let orderedLayers = [];
