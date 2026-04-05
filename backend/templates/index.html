@@ -1416,6 +1416,14 @@
                                 };
                             }
                             vectorLayers[vid] = L.geoJSON(geojson, {...layerOpts, renderer: L.svg()}).addTo(map);
+// [Z-ORDER FIX] Reordenar camadas apos adicionar
+setTimeout(function(){
+    if(typeof refreshVectorZOrder === 'function') {
+        refreshVectorZOrder();
+        console.log('[Z-Order] Executado pos-addTo(map)');
+    }
+}, 100);
+
                             saveVectorGroups();
                         } else {
                             alert('Não foi possível converter o vetor. Formato: ' + vec.type);
