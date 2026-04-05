@@ -841,27 +841,7 @@
         let rasterGroupVisibility = {};
         let rasterGroups = [];
 
-        
-        function refreshVectorZOrder() {
-            if (!vectorGroups || vectorGroups.length === 0) return;
-            vectorGroups.slice().reverse().forEach((g, gIdx) => {
-                const groupVis = vectorGroupVisibility[g.id] !== false;
-                if (!groupVis) return;
-                if (!g.vectors || g.vectors.length === 0) return;
-                g.vectors.slice().reverse().forEach((v, vIdx) => {
-                    const vecVis = vectorVisibility[v.id] !== false;
-                    if (!vecVis) return;
-                    const layerGroup = vectorLayers[v.id];
-                    if (layerGroup) {
-                        layerGroup.eachLayer(function(layer) {
-                            if (map.hasLayer(layer)) { layer.bringToFront(); }
-                        });
-                    }
-                });
-            });
-        }
-
-$1 {
+        function loadVectorGroups() {
             if (!projetoAtual) return;
             fetch(`/api/vector/${projetoAtual}/groups`)
                 .then(r => r.json())
