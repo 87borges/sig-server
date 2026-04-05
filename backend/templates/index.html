@@ -2024,21 +2024,21 @@
         }
 
         function refreshVectorZOrder() {
-            // QGIS-style: top of list = top of map (highest z-index)
-            let zIndex = 400;
+            // Reorder layers physically on map based on list position
+            // First in list = bottom of map, Last in list = top of map
+            let orderedLayers = [];
             for (let gi = 0; gi < vectorGroups.length; gi++) {
                 const g = vectorGroups[gi];
                 for (let vi = 0; vi < g.vectors.length; vi++) {
                     const v = g.vectors[vi];
                     if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
-                        vectorLayers[v.id].eachLayer(l => {
-                            try { if (l.setZIndex) l.setZIndex(zIndex); } catch(e) {}
-                            try { if (l.getElement) { l.getElement().style.zIndex = zIndex; } } catch(e) {}
-                        });
-                        zIndex += 10;
+                        orderedLayers.push({ layer: vectorLayers[v.id] });
                     }
                 }
             }
+            // Remove all then re-add in correct order
+            orderedLayers.forEach(item => { map.removeLayer(item.layer); });
+            orderedLayers.forEach(item => { map.addLayer(item.layer); });
         }
 
         async function autoShowExistingVectors() {
