@@ -1417,6 +1417,22 @@
                             }
                             vectorLayers[vid] = L.geoJSON(geojson, {...layerOpts, renderer: L.svg()}).addTo(map);
 // [Z-ORDER FIX] Reordenar camadas apos adicionar
+// Z-ORDER FIX v9
+if (typeof vectorGroups !== 'undefined' && vectorGroups.length > 0) {
+    var pos = -1;
+    for (var gi = 0; gi < vectorGroups.length; gi++) {
+        for (var vi = 0; vi < vectorGroups[gi].vectors.length; vi++) {
+            if (vectorGroups[gi].vectors[vi].id === vid) { pos = vi; break; }
+        }
+        if (pos !== -1) break;
+    }
+    if (pos !== -1) {
+        var zIndex = 1000 - (pos * 50);
+        vectorLayers[vid].eachLayer(function(l) {
+            if (l.setZIndex) l.setZIndex(zIndex);
+        });
+    }
+}
 setTimeout(function(){
     if(typeof refreshVectorZOrder === 'function') {
         refreshVectorZOrder();
