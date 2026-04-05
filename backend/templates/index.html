@@ -11,6 +11,16 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; display: flex; min-height: 100vh; }
 
+        /* Toggle Switch */
+        .vis-toggle { position:relative; display:inline-block; width:22px; height:12px; flex-shrink:0; cursor:pointer; }
+        .vis-toggle input { opacity:0; width:0; height:0; position:absolute; }
+        .vis-toggle .slider { position:absolute; inset:0; background:#555; border-radius:6px; transition:0.2s; }
+        .vis-toggle .slider::before { content:''; position:absolute; width:8px; height:8px; left:2px; bottom:2px; background:white; border-radius:50%; transition:0.2s; }
+        .vis-toggle input:checked + .slider { background:rgb(77,255,198); }
+        .vis-toggle input:checked + .slider::before { transform:translateX(10px); }
+        .vis-toggle.dark input:checked + .slider { background:rgb(77,255,198); }
+        .vis-toggle.dark .slider { background:#aaa; }
+
         /* Sidebar */
         .sidebar { width: 60px; background: #1a1a1a; color: white; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; overflow: hidden; transition: width 0.25s ease; }
         .sidebar:hover { width: 220px; }
@@ -58,23 +68,6 @@
         #map { width: 100%; height: 100%; }
         .leaflet-control-layers { font-size: 0.85em; }
 
-        /* Painel lateral do mapa */
-        .map-panel { width: 300px; background: rgba(255,255,255,0.45); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); height: 100%; overflow-y: auto; box-shadow: 2px 0 8px rgba(0,0,0,0.1); z-index: 40; position: absolute; left: 0; top: 0; }
-        .map-panel-header { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; }
-        .layer-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
-        .layer-item:hover { background: #f9f9f9; }
-        .layer-name { font-size: 0.9em; }
-        .layer-type { font-size: 0.7em; color: #888; }
-        .toggle { width: 40px; height: 22px; background: #ccc; border-radius: 11px; cursor: pointer; position: relative; transition: background 0.2s; }
-        .toggle.on { background: #1a1a1a; }
-        .toggle::after { content: ''; width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: left 0.2s; }
-        .toggle.on::after { left: 20px; }
-
-        /* Upload area */
-        .upload-area { padding: 15px; border: 2px dashed #ddd; border-radius: 8px; text-align: center; margin: 15px; cursor: pointer; transition: border-color 0.2s; }
-        .upload-area:hover { border-color: #1a1a1a; }
-        .upload-area p { font-size: 0.85em; color: #888; }
-
         /* Basemap selector */
         .basemap-row { padding:5px 12px; border-bottom:none; display:flex; align-items:center; gap:6px; }
         .basemap-row label { font-size: 0.85em; cursor: pointer; }
@@ -83,13 +76,8 @@
         .bm-btn:hover { background:rgba(255,255,255,0.2); }
         .bm-btn.bm-active { background:rgba(255,255,255,0.25);font-weight:600; }
 
-        /* Empty state */
-        .empty-state { text-align: center; padding: 40px 20px; color: #888; }
-        .empty-state .icon { font-size: 3em; margin-bottom: 10px; }
-
         @media (max-width: 768px) {
-            .map-panel { width: 220px; }
-        }
+        .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
     </style>
 </head>
 <body>
@@ -134,41 +122,78 @@
 
             <!-- Mapa -->
             <div class="view" id="view-mapa">
-                <div class="map-panel">
-                    <div class="map-panel-header">🗺️ Camadas</div>
-                    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-                        <p>📎 Clique para enviar<br><small>.shp .kml .kmz .gpkg .zip</small></p>
-                        <input type="file" id="file-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadFiles(this.files)">
-                    </div>
-                    <div id="layers-list"></div>
-                </div>
                 <div style="flex:1;position:relative;width:100%;height:100%"><div id="map" style="width:100%;height:100%;position:absolute;inset:0"></div>
-                    <!-- Basemap selector flutuante -->
-                    <div id="basemap-btn" onmouseenter="openBasemapMenu()" onmouseleave="closeBasemapMenu()" style="position:absolute;bottom:20px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🌐</div>
-                    <div id="basemap-menu" onmouseenter="clearTimeout(basemapTimeout)" onmouseleave="closeBasemapMenu()" style="display:none;position:absolute;bottom:60px;right:10px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);color:white;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:180px;max-height:70vh;overflow-y:auto;font-size:0.8em">
-                        <div style="padding:4px 12px;font-size:0.6em;color:inherit;font-weight:600;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px">Raster Base</div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('osm',this)">OpenStreetMap</div></div>
-                        <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">ESRI</div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_sat',this)">Satélite</div></div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_topo',this)">Topográfico</div></div>
-                        <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">GOOGLE</div>
-                        <div class="basemap-row"><div class="bm-btn bm-active" onclick="toggleBase('google_sat',this)">Satélite</div></div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_hyb',this)">Híbrido</div></div>
-                        <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_ter',this)">Terreno</div></div>
-                        <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
-                        <div style="padding:3px 12px;font-size:0.58em;color:inherit;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
-                        <div id="raster-groups-list"></div>
-                        <div class="basemap-row" onclick="createRasterGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
-                        <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRastersToGroup(this.files)">
+                    <!-- Side Panel -->
+                    <div id="side-panel" style="display:none;position:absolute;top:10px;left:10px;bottom:10px;width:280px;z-index:1000;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);overflow:hidden;display:none;flex-direction:column">
+                        <!-- Panel tabs -->
+                        <div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.15)">
+                            <div id="tab-basemap" onclick="switchPanelTab('basemap')" style="flex:1;padding:10px;text-align:center;font-size:0.75em;font-weight:600;cursor:pointer;opacity:0.5;border-bottom:2px solid transparent">🌐 Raster Base</div>
+                            <div id="tab-vectors" onclick="switchPanelTab('vectors')" style="flex:1;padding:10px;text-align:center;font-size:0.75em;font-weight:600;cursor:pointer;opacity:0.5;border-bottom:2px solid transparent">📐 Vetores</div>
+                            <span onclick="closeSidePanel()" style="cursor:pointer;padding:10px 12px;font-size:0.9em;opacity:0.5">&times;</span>
+                        </div>
+                        <!-- Tab: Basemap -->
+                        <div id="panel-basemap" style="display:none;flex:1;overflow-y:auto;padding:6px 0;font-size:0.92em">
+                            <div style="padding:4px 12px;font-size:0.6em;font-weight:600;opacity:0.7;text-transform:uppercase;letter-spacing:0.5px">Raster Base</div>
+                            <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('osm',this)">OpenStreetMap</div></div>
+                            <div style="padding:3px 12px;font-size:0.58em;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">ESRI</div>
+                            <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_sat',this)">Satélite</div></div>
+                            <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('esri_topo',this)">Topográfico</div></div>
+                            <div style="padding:3px 12px;font-size:0.58em;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">GOOGLE</div>
+                            <div class="basemap-row"><div class="bm-btn bm-active" onclick="toggleBase('google_sat',this)">Satélite</div></div>
+                            <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_hyb',this)">Híbrido</div></div>
+                            <div class="basemap-row"><div class="bm-btn" onclick="toggleBase('google_ter',this)">Terreno</div></div>
+                            <div style="border-top:1px solid rgba(255,255,255,0.15);margin:6px 12px"></div>
+                            <div style="padding:3px 12px;font-size:0.58em;text-transform:uppercase;opacity:0.6;letter-spacing:0.5px">Personalizados</div>
+                            <div id="raster-groups-list"></div>
+                            <div class="basemap-row" onclick="createRasterGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
+                            <input type="file" id="raster-upload-input" style="display:none" accept=".tif,.tiff" multiple onchange="uploadRastersToGroup(this.files)">
+                        </div>
+                        <!-- Tab: Vectors -->
+                        <div id="panel-vectors" style="display:none;flex:1;overflow-y:auto;padding:6px 0;font-size:0.92em">
+                            <div style="padding:4px 12px;font-size:0.6em;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7">Vetores</div>
+                            <div id="vector-groups-list"></div>
+                            <div style="border-top:1px solid rgba(255,255,255,0.15);margin:4px 12px"></div>
+                            <div class="basemap-row" onclick="createVectorGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
+                            <input type="file" id="vector-upload-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadVectors(this.files)">
+                        </div>
                     </div>
-                    <!-- Vector Menu -->
-                    <div id="vector-btn" onmouseenter="openVectorMenu()" onmouseleave="closeVectorMenu()" style="position:absolute;bottom:20px;right:60px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">📐</div>
-                    <div id="vector-menu" onmouseenter="clearTimeout(vectorTimeout)" onmouseleave="closeVectorMenu()" style="display:none;position:absolute;bottom:60px;right:50px;z-index:1000;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);color:rgba(0,0,0,0.55);border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.12);padding:6px 0;min-width:200px;max-height:70vh;overflow-y:auto;font-size:0.8em">
-                        <div style="padding:4px 12px;font-size:0.6em;color:inherit;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7">Vetores</div>
-                        <div id="vector-groups-list"></div>
-                        <div style="border-top:1px solid rgba(128,128,128,0.2);margin:4px 12px"></div>
-                        <div class="basemap-row" onclick="createVectorGroup()" style="cursor:pointer;font-weight:600"><label style="cursor:pointer;color:inherit">➕ Novo grupo</label></div>
-                        <input type="file" id="vector-upload-input" style="display:none" accept=".shp,.shx,.dbf,.prj,.kml,.kmz,.gpkg,.zip" multiple onchange="uploadVectors(this.files)">
+                    <!-- Floating toggle button -->
+                    <div id="menu-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">⚙️</div>
+                    <!-- Hidden old menus (kept for compatibility) -->
+                    <div id="basemap-menu" style="display:none"></div>
+                    <div id="vector-menu" style="display:none"></div>
+                    <!-- Group Name Modal -->
+                    <div id="group-name-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="font-weight:700;font-size:1em;margin-bottom:16px" id="gnm-title">Novo grupo</div>
+                            <input type="text" id="gnm-input" placeholder="Nome do grupo" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter')confirmGroupName();if(event.key==='Escape')cancelGroupName()">
+                            <div style="display:flex;gap:8px;margin-top:16px">
+                                <button onclick="cancelGroupName()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
+                                <button onclick="confirmGroupName()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Criar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Categorize Modal -->
+                    <div id="categorize-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:400px;max-width:92vw;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                                <span style="font-weight:700;font-size:1.05em" id="cat-title">Categorizar vetor</span>
+                                <span onclick="closeCategorize()" style="cursor:pointer;font-size:1.2em;opacity:0.5;padding:0 4px">✕</span>
+                            </div>
+                            <div id="cat-loading" style="text-align:center;padding:20px;color:#888">Carregando atributos...</div>
+                            <div id="cat-content" style="display:none">
+                                <div style="font-size:0.8em;color:#666;margin-bottom:10px">Selecione a coluna de atributos para categorizar:</div>
+                                <div id="cat-columns" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+                            </div>
+                            <div id="cat-result" style="display:none">
+                                <div style="font-size:0.8em;color:#666;margin-bottom:10px" id="cat-result-info"></div>
+                                <div id="cat-categories" style="display:flex;flex-direction:column;gap:4px;margin-bottom:16px;max-height:40vh;overflow-y:auto"></div>
+                                <div style="display:flex;gap:8px;justify-content:flex-end">
+                                    <button onclick="closeCategorize()" style="padding:6px 16px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.85em">Cancelar</button>
+                                    <button onclick="applyCategorize()" style="padding:6px 16px;border:none;border-radius:8px;background:#2c3e50;color:white;cursor:pointer;font-size:0.85em">Aplicar</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <!-- Vector Style Editor Modal -->
                     <div id="vector-editor" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
@@ -182,23 +207,23 @@
                             <div style="margin-bottom:14px">
                                 <div style="font-size:0.8em;font-weight:600;margin-bottom:6px" id="ve-color-label">Cor</div>
                                 <div style="display:flex;gap:8px;align-items:center">
-                                    <input type="color" id="ve-color-picker" value="#e74c3c" style="width:40px;height:40px;border:none;cursor:pointer;border-radius:6px;padding:0">
+                                    <input type="color" id="ve-color-picker" value="#ffffff" style="width:40px;height:40px;border:none;cursor:pointer;border-radius:6px;padding:0">
                                     <div id="ve-color-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;flex:1"></div>
                                 </div>
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
                                     <span style="font-size:0.75em;color:#888">HEX:</span>
-                                    <input type="text" id="ve-color-hex" value="#e74c3c" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                    <input type="text" id="ve-color-hex" value="#ffffff" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
                                 </div>
                             </div>
                             <!-- Transparência -->
                             <div style="margin-bottom:14px">
                                 <div style="display:flex;justify-content:space-between;font-size:0.8em;font-weight:600;margin-bottom:4px">
                                     <span id="ve-opacity-label">Transparência</span>
-                                    <span id="ve-opacity-val">60%</span>
+                                    <span id="ve-opacity-val">100%</span>
                                 </div>
                                 <div style="position:relative;height:16px;background:repeating-conic-gradient(#ccc 0% 25%,white 0% 50%) 50%/10px 10px;border-radius:8px;overflow:hidden;border:1px solid #ddd">
                                     <div id="ve-opacity-fill" style="position:absolute;inset:0;background:#e74c3c;border-radius:8px"></div>
-                                    <input type="range" id="ve-opacity" min="0" max="100" value="60" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
+                                    <input type="range" id="ve-opacity" min="0" max="100" value="100" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
                                 </div>
                             </div>
                             <!-- Espessura (linhas/polígonos) -->
@@ -208,6 +233,15 @@
                                     <span id="ve-weight-val">2px</span>
                                 </div>
                                 <input type="range" id="ve-weight" min="0" max="20" value="2" style="width:100%;accent-color:#333;cursor:pointer">
+                            </div>
+                            <!-- Tipo de linha -->
+                            <!-- Tipo de linha (contorno de linhas e polígonos) -->
+                            <div id="ve-dash-section" style="margin-bottom:14px;display:none">
+                                <div style="font-size:0.8em;font-weight:600;margin-bottom:6px">Tipo de contorno</div>
+                                <div id="ve-dash-dropdown" style="position:relative;width:100%">
+                                    <div id="ve-dash-btn" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:white;cursor:pointer;display:flex;align-items:center;gap:8px"></div>
+                                    <div id="ve-dash-options" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-radius:6px;margin-top:4px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.15)"></div>
+                                </div>
                             </div>
                             <!-- Cor do contorno (polígonos) -->
                             <div id="ve-stroke-section" style="margin-bottom:14px;display:none">
@@ -219,6 +253,14 @@
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
                                     <span style="font-size:0.75em;color:#888">HEX:</span>
                                     <input type="text" id="ve-stroke-hex" value="#333333" maxlength="7" style="width:80px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.85em;font-family:monospace">
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.8em;font-weight:600;margin-bottom:4px;margin-top:6px">
+                                    <span>Transparência do contorno</span>
+                                    <span id="ve-stroke-opacity-val">100%</span>
+                                </div>
+                                <div style="position:relative;height:16px;background:repeating-conic-gradient(#ccc 0% 25%,white 0% 50%) 50%/10px 10px;border-radius:8px;overflow:hidden;border:1px solid #ddd">
+                                    <div id="ve-stroke-opacity-fill" style="position:absolute;inset:0;background:#333333;border-radius:8px"></div>
+                                    <input type="range" id="ve-stroke-opacity" min="0" max="100" value="100" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0">
                                 </div>
                             </div>
                             <!-- Marcadores (pontos) -->
@@ -234,8 +276,8 @@
                             <!-- Preview -->
                             <div id="ve-preview" style="margin-bottom:14px;text-align:center;padding:16px;background:#f5f5f5;border-radius:10px;min-height:60px;display:flex;align-items:center;justify-content:center"></div>
                             <div style="display:flex;gap:8px">
-                                <button onclick="cancelVectorEdit()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
-                                <button onclick="applyVectorEdit()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Aplicar</button>
+                                <button id="ve-cancel-btn" onclick="cancelVectorEdit()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button>
+                                <button id="ve-save-btn" onclick="applyVectorEdit()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600">Aplicar</button>
                             </div>
                         </div>
                     </div>
@@ -254,6 +296,51 @@
         let projetoAtual = null;
         let map, baseLayer = null, overlays = {}, baseLayerType = 'google_sat';
 
+        // ===== CUSTOM SYMBOL MARKER (draws text on canvas/SVG like paths) =====
+        L.SymbolMarker = L.CircleMarker.extend({
+            options: { symbol: '●', symbolSize: 16 },
+            _updatePath: function() {
+                if (!this._renderer) return;
+                const r = this._renderer;
+                const p = this._point;
+                if (!p) return;
+                if (r._ctx) {
+                    // Canvas renderer
+                    const ctx = r._ctx;
+                    const s = this.options.symbolSize || 16;
+                    ctx.save();
+                    ctx.font = s + 'px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = this.options.color || '#ffffff';
+                    ctx.globalAlpha = this.options.fillOpacity ?? this.options.opacity ?? 1;
+                    ctx.fillText(this.options.symbol || '●', p.x, p.y);
+                    ctx.restore();
+                } else {
+                    // SVG renderer fallback
+                    if (!this._path) this._path = L.SVG.create('text');
+                    const s = this.options.symbolSize || 16;
+                    this._path.setAttribute('x', p.x);
+                    this._path.setAttribute('y', p.y);
+                    this._path.setAttribute('font-size', s);
+                    this._path.setAttribute('text-anchor', 'middle');
+                    this._path.setAttribute('dominant-baseline', 'central');
+                    this._path.setAttribute('fill', this.options.color || '#ffffff');
+                    this._path.setAttribute('opacity', this.options.fillOpacity ?? this.options.opacity ?? 1);
+                    this._path.textContent = this.options.symbol || '●';
+                    if (!this._path.parentNode) r._rootGroup.appendChild(this._path);
+                }
+            },
+            _containsPoint: function(p) {
+                const s = this.options.symbolSize || 16;
+                const r = s / 2 + 4;
+                return p.distanceTo(this._point) <= r;
+            },
+            setSymbol: function(sym) { this.options.symbol = sym; return this.redraw(); },
+            setSymbolSize: function(sz) { this.options.symbolSize = sz; return this.redraw(); }
+        });
+        L.symbolMarker = function(latlng, opts) { return new L.SymbolMarker(latlng, opts); };
+
         // ===== MAPA =====
         function initMap() {
             map = L.map('map', { zoomControl: true }).setView([-15.78, -47.93], 10);
@@ -264,16 +351,63 @@
 
         let basemapTimeout = null;
 
-        function openBasemapMenu() {
-            clearTimeout(basemapTimeout);
-            document.getElementById('basemap-menu').style.display = 'block';
+        // ===== GROUP NAME MODAL =====
+        let groupNameCallback = null;
+
+        function showGroupNameModal(title, callback) {
+            document.getElementById('gnm-title').textContent = title;
+            document.getElementById('gnm-input').value = '';
+            groupNameCallback = callback;
+            document.getElementById('group-name-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('gnm-input').focus(), 100);
         }
 
-        function closeBasemapMenu() {
-            basemapTimeout = setTimeout(() => {
-                document.getElementById('basemap-menu').style.display = 'none';
-            }, 400);
+        function confirmGroupName() {
+            const name = document.getElementById('gnm-input').value.trim();
+            document.getElementById('group-name-modal').style.display = 'none';
+            if (name && groupNameCallback) groupNameCallback(name);
+            groupNameCallback = null;
         }
+
+        function cancelGroupName() {
+            document.getElementById('group-name-modal').style.display = 'none';
+            groupNameCallback = null;
+        }
+
+        // ===== SIDE PANEL =====
+        let currentPanelTab = null;
+
+        function openSidePanel(tab) {
+            const panel = document.getElementById('side-panel');
+            panel.style.display = 'flex';
+            document.getElementById('menu-btn').style.display = 'none';
+            switchPanelTab(tab);
+        }
+
+        function closeSidePanel() {
+            document.getElementById('side-panel').style.display = 'none';
+            document.getElementById('menu-btn').style.display = '';
+            currentPanelTab = null;
+        }
+
+        function switchPanelTab(tab) {
+            currentPanelTab = tab;
+            const tabs = ['basemap', 'vectors'];
+            tabs.forEach(t => {
+                document.getElementById('panel-' + t).style.display = t === tab ? 'block' : 'none';
+                const tabBtn = document.getElementById('tab-' + t);
+                tabBtn.style.opacity = t === tab ? '1' : '0.5';
+                tabBtn.style.borderBottomColor = t === tab ? 'rgba(255,255,255,0.8)' : 'transparent';
+            });
+            if (tab === 'basemap') { loadRasterGroups(); }
+            if (tab === 'vectors') { loadVectorGroups(); }
+        }
+
+        // ===== OLD MENU FUNCTIONS (compatibility) =====
+        function openBasemapMenu() { openSidePanel('basemap'); }
+        function closeBasemapMenu() {}
+        function openVectorMenu() { openSidePanel('vectors'); }
+        function closeVectorMenu() {}
 
         function toggleBase(tipo, btn) {
             // Desmarcar todos os botões
@@ -353,6 +487,7 @@
 
         function fecharWayback() {
             if (waybackLayer) { map.removeLayer(waybackLayer); waybackLayer = null; }
+            document.getElementById('wayback-timeline').style.display = 'none';
         }
 
         // ===== RASTER UPLOAD =====
@@ -494,32 +629,28 @@
                 const gdiv = document.createElement('div');
                 gdiv.style.cssText = 'border-bottom:1px solid rgba(255,255,255,0.1)';
                 gdiv.draggable = true;
-                gdiv.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-group', gid:g.id, idx:gi}));
-                    gdiv.style.opacity = '0.4';
-                });
-                gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
-                gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
-                gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
-                gdiv.addEventListener('drop', e => {
-                    e.preventDefault(); gdiv.style.borderTop = '';
-                    try {
-                        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                makeDraggable(gdiv,
+                    () => ({type:'raster-group', gid:g.id}),
+                    (from) => {
                         if (from.type !== 'raster-group') return;
-                        const [moved] = rasterGroups.splice(from.idx, 1);
+                        const fromIdx = rasterGroups.findIndex(x => x.id === from.gid);
+                        if (fromIdx < 0) return;
+                        const [moved] = rasterGroups.splice(fromIdx, 1);
                         const toIdx = rasterGroups.findIndex(x => x.id === g.id);
+                        if (toIdx < 0) return;
                         rasterGroups.splice(toIdx, 0, moved);
                         saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
-                    } catch(err) {}
-                });
+                    }
+                );
                 const groupVis = rasterGroupVisibility[g.id] !== false;
                 const header = document.createElement('div');
                 header.className = 'basemap-row';
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:4px 12px;font-weight:600;font-size:0.72em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.4;flex-shrink:0;user-select:none">⠿</span>
-                    <span onclick="toggleAllRasters('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark" title="${groupVis?'Desativar grupo':'Ativar grupo'}"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllRasters('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleRasterGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
+                    <span style="flex-shrink:0;font-size:0.85em">🗄️</span>
                     <span ondblclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" onclick="inlineRename(this,'raster-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptRasterUpload('${g.id}')" style="cursor:pointer;font-size:0.8em;flex-shrink:0" title="Adicionar raster">➕</span>
                     <span onclick="deleteRasterGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir grupo">🗑️</span>
@@ -532,29 +663,26 @@
                         row.className = 'basemap-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
                         row.draggable = true;
-                        row.addEventListener('dragstart', e => {
-                            e.dataTransfer.setData('text/plain', JSON.stringify({type:'raster-item', gid:g.id, rid:r.id, idx:ri}));
-                            row.style.opacity = '0.4';
-                        });
-                        row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-                        row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid rgba(255,255,255,0.5)'; });
-                        row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
-                        row.addEventListener('drop', e => {
-                            e.preventDefault(); row.style.borderTop = '';
-                            try {
-                                const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        makeDraggable(row,
+                            () => ({type:'raster-item', gid:g.id, rid:r.id}),
+                            (from) => {
                                 if (from.type !== 'raster-item' || from.gid !== g.id) return;
                                 const grp = rasterGroups.find(x => x.id === g.id);
-                                const [moved] = grp.rasters.splice(from.idx, 1);
+                                if (!grp) return;
+                                const fromIdx = grp.rasters.findIndex(x => x.id === from.rid);
+                                if (fromIdx < 0) return;
+                                const [moved] = grp.rasters.splice(fromIdx, 1);
                                 const toIdx = grp.rasters.findIndex(x => x.id === r.id);
+                                if (toIdx < 0) return;
                                 grp.rasters.splice(toIdx, 0, moved);
                                 saveRasterGroups(); refreshRasterZOrder(); renderRasterMenu();
-                            } catch(err) {}
-                        });
+                            }
+                        );
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                            <span id="reye_${r.id}" onclick="toggleRaster('${g.id}','${r.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                            <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${vis?'checked':''} onchange="toggleRaster('${g.id}','${r.id}')"><span class="slider"></span></label></span>
                             <span ondblclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" onclick="inlineRename(this,'raster-item','${g.id}|${r.id}','${r.name}')" style="flex:1;cursor:text;font-size:0.78em;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
+                            <span onclick="zoomToRaster('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
                             <span onclick="deleteRasterFromGroup('${g.id}','${r.id}')" style="cursor:pointer;opacity:0.5;font-size:0.72em;flex-shrink:0" title="Excluir raster">🗑️</span>
                         `;
                         gdiv.appendChild(row);
@@ -575,11 +703,11 @@
         }
 
         function createRasterGroup() {
-            const name = prompt('Nome do grupo:');
-            if (!name) return;
-            fetch(`/api/raster-groups/${projetoAtual}/group`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
-            }).then(r => r.json()).then(() => loadRasterGroups());
+            showGroupNameModal('Novo grupo de raster', (name) => {
+                fetch(`/api/raster-groups/${projetoAtual}/group`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
+                }).then(r => r.json()).then(() => loadRasterGroups());
+            });
         }
 
         function deleteRasterGroup(gid) {
@@ -666,7 +794,7 @@
                 }
             }
             hideRasterOverlay();
-            loadRasterGroups();
+            renderRasterMenu();
             if (failed === 0) {
                 showRasterFeedback('✅', `${success} raster(s) carregado(s)`, '#22c55e');
             } else {
@@ -748,6 +876,8 @@
         let vectorTimeout = null;
         let vectorGroups = [];
         let vectorLayers = {};
+        let vectorCategoryVisibility = {};  // { "vid_value": true/false } undefined = visible
+        let vectorCategoryCollapsed = {};   // { "vid": true/false }
         let vectorVisibility = {};      // individual: true/false (undefined = not set = visible)
         let vectorGroupVisibility = {}; // group: true/false (undefined = visible)
         let vectorGroupCollapsed = {};  // group: true/false
@@ -755,18 +885,6 @@
         let vectorUploadGroupId = null;
         let rasterGroupVisibility = {};
         let rasterGroups = [];
-
-        function openVectorMenu() {
-            clearTimeout(vectorTimeout);
-            document.getElementById('vector-menu').style.display = 'block';
-            loadVectorGroups();
-        }
-
-        function closeVectorMenu() {
-            vectorTimeout = setTimeout(() => {
-                document.getElementById('vector-menu').style.display = 'none';
-            }, 400);
-        }
 
         function loadVectorGroups() {
             if (!projetoAtual) return;
@@ -778,7 +896,7 @@
                     const undetected = [];
                     groups.forEach(g => g.vectors.forEach(v => { if (!v._detectedType) undetected.push(v); }));
                     if (undetected.length > 0) {
-                        Promise.all(undetected.map(v => fetch(`/api/vector/${projetoAtual}/detect-type/${v.id}`).then(r=>r.json()).then(d=>{v._detectedType=d.type;}))).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
+                        Promise.all(undetected.map(v => { if (v.geom_type) { v._detectedType = v.geom_type; return Promise.resolve(); } let url = `/api/vector/${projetoAtual}/detect-type/${v.id}`; if (v.gpkg_layer) url += `?layer=${encodeURIComponent(v.gpkg_layer)}`; return fetch(url).then(r=>r.json()).then(d=>{v._detectedType=d.type;}); })).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
                     } else {
                         renderVectorMenu();
                     }
@@ -793,88 +911,166 @@
                 const gdiv = document.createElement('div');
                 gdiv.style.cssText = 'border-bottom:1px solid rgba(128,128,128,0.15)';
                 gdiv.draggable = true;
-                gdiv.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify({type:'vector-group', gid:g.id, idx:gi}));
-                    gdiv.style.opacity = '0.4';
-                });
-                gdiv.addEventListener('dragend', () => { gdiv.style.opacity = '1'; });
-                gdiv.addEventListener('dragover', e => { e.preventDefault(); gdiv.style.borderTop = '2px solid #999'; });
-                gdiv.addEventListener('dragleave', () => { gdiv.style.borderTop = ''; });
-                gdiv.addEventListener('drop', e => {
-                    e.preventDefault(); gdiv.style.borderTop = '';
-                    try {
-                        const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                makeDraggable(gdiv,
+                    () => ({type:'vector-group', gid:g.id}),
+                    (from) => {
                         if (from.type !== 'vector-group') return;
-                        const [moved] = vectorGroups.splice(from.idx, 1);
+                        const fromIdx = vectorGroups.findIndex(x => x.id === from.gid);
+                        if (fromIdx < 0) return;
+                        const [moved] = vectorGroups.splice(fromIdx, 1);
                         const toIdx = vectorGroups.findIndex(x => x.id === g.id);
+                        if (toIdx < 0) return;
                         vectorGroups.splice(toIdx, 0, moved);
-                        saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
-                    } catch(err) {}
-                });
+                        saveVectorGroups(); renderVectorMenu();
+                    }
+                );
                 const groupVis = vectorGroupVisibility[g.id] !== false;
                 const header = document.createElement('div');
                 header.className = 'basemap-row';
                 header.style.cssText = 'display:flex;align-items:center;gap:4px;padding:5px 12px;font-weight:600;font-size:0.75em';
                 header.innerHTML = `
                     <span style="cursor:grab;font-size:0.65em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                    <span onclick="toggleAllVectors('${g.id}')" style="cursor:pointer;font-size:0.9em;flex-shrink:0;user-select:none">${groupVis ? '👁️' : '🙈'}</span>
+                    <span style="flex-shrink:0"><label class="vis-toggle dark" title="${groupVis?'Desativar grupo':'Ativar grupo'}"><input type="checkbox" ${groupVis?'checked':''} onchange="toggleAllVectors('${g.id}')"><span class="slider"></span></label></span>
                     <span onclick="toggleVectorGroupCollapse('${g.id}')" style="cursor:pointer;font-size:0.65em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${collapsed?'-90':'0'}deg)">▼</span>
+                    <span style="flex-shrink:0;font-size:0.85em">🗄️</span>
                     <span id="vgname_${g.id}" ondblclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" onclick="inlineRename(this,'vector-group','${g.id}','${g.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</span>
                     <span onclick="promptVectorUpload('${g.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0" title="Adicionar vetor">➕</span>
+                    <span onclick="downloadVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.5;font-size:0.75em;flex-shrink:0" title="Baixar grupo">💾</span>
                     <span onclick="deleteVectorGroup('${g.id}')" style="cursor:pointer;opacity:0.4;font-size:0.75em;flex-shrink:0" title="Excluir grupo">🗑️</span>
                 `;
                 gdiv.appendChild(header);
                 if (!collapsed) {
                     g.vectors.forEach((v, vi) => {
+                        const vis = isVectorVisible(g.id, v.id);
+                        const color = v.color || '#ffffff';
+                        const vtype = v._detectedType || 'polygon';
+                        const hasCat = v.categorized && v.categories && v.categories.length > 0;
+                        const catCollapsed = vectorCategoryCollapsed[v.id];
+
+                        // Vector row
                         const row = document.createElement('div');
                         row.className = 'basemap-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:3px 12px 3px 28px;font-size:0.72em';
                         row.draggable = true;
-                        row.addEventListener('dragstart', e => {
-                            e.dataTransfer.setData('text/plain', JSON.stringify({gid:g.id, vid:v.id, idx: vi}));
-                            row.style.opacity = '0.4';
-                        });
-                        row.addEventListener('dragend', () => { row.style.opacity = '1'; });
-                        row.addEventListener('dragover', e => { e.preventDefault(); row.style.borderTop = '2px solid #999'; });
-                        row.addEventListener('dragleave', () => { row.style.borderTop = ''; });
-                        row.addEventListener('drop', e => {
-                            e.preventDefault(); row.style.borderTop = '';
-                            try {
-                                const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        makeDraggable(row,
+                            () => ({gid:g.id, vid:v.id}),
+                            (from) => {
                                 if (from.gid !== g.id) return;
                                 const grp = vectorGroups.find(x => x.id === g.id);
                                 if (!grp) return;
-                                const [moved] = grp.vectors.splice(from.idx, 1);
+                                const fromIdx = grp.vectors.findIndex(x => x.id === from.vid);
+                                if (fromIdx < 0) return;
+                                const [moved] = grp.vectors.splice(fromIdx, 1);
                                 const toIdx = grp.vectors.findIndex(x => x.id === v.id);
+                                if (toIdx < 0) return;
                                 grp.vectors.splice(toIdx, 0, moved);
-                                saveVectorGroups(); refreshVectorZOrder(); renderVectorMenu();
-                            } catch(err) {}
-                        });
-                        const vis = isVectorVisible(g.id, v.id);
-                        const color = v.color || '#e74c3c';
-                        const vtype = v._detectedType || 'polygon';
+                                saveVectorGroups(); renderVectorMenu();
+                            }
+                        );
+
                         let legendHtml = '';
-                        if (vtype === 'point') {
-                            const m = v.marker || '●'; const ms = v.markerSize || 16;
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color}">${m}</span>`;
-                        } else if (vtype === 'line') {
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:16px;height:3px;background:${color};border-radius:1px;vertical-align:middle"></span>`;
+                        if (hasCat) {
+                            legendHtml = `<span onclick="toggleVectorCategoryCollapse('${v.id}')" style="cursor:pointer;font-size:0.95em;flex-shrink:0">${catCollapsed ? '📁' : '📂'}</span>`;
                         } else {
-                            const sc = v.strokeColor || '#333333'; const w = Math.min(v.weight||2, 3);
-                            legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:${color};border:${w}px solid ${sc};border-radius:2px;vertical-align:middle"></span>`;
+                            if (vtype === 'point') {
+                                const m = v.marker || '●'; const ms = v.markerSize || 16; const op = v.opacity ?? 1;
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;font-size:${Math.min(ms,14)}px;color:${color};opacity:${op}">${m}</span>`;
+                            } else if (vtype === 'line') {
+                                const op = v.opacity ?? 1;
+                                const w = Math.min(v.weight||2, 4);
+                                const lr = parseInt(color.slice(1,3),16), lg = parseInt(color.slice(3,5),16), lb = parseInt(color.slice(5,7),16);
+                                let da = '';
+                                if (v.dash) {
+                                    const scale = Math.max(1, w / 2);
+                                    const scaled = v.dash.split(',').map(Number).map((p,i) => i%2===1 ? Math.round(p*scale) : p);
+                                    da = ` stroke-dasharray="${scaled.join(',')}"`;
+                                }
+                                const svgH = Math.max(w+2, 5);
+                                legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;vertical-align:middle"><svg width="16" height="${svgH}"><line x1="0" y1="${svgH/2}" x2="16" y2="${svgH/2}" stroke="rgba(${lr},${lg},${lb},${op})" stroke-width="${w}"${da} stroke-linecap="butt"/></svg></span>`;
+                            } else {
+                                const sc = v.strokeColor || '#333333'; const w = v.weight ?? 2;
+                                const op = v.opacity ?? 1; const sop = v.strokeOpacity ?? 1;
+                                const fr = parseInt(color.slice(1,3),16), fg = parseInt(color.slice(3,5),16), fb = parseInt(color.slice(5,7),16);
+                                const sr = parseInt(sc.slice(1,3),16), sg2 = parseInt(sc.slice(3,5),16), sb = parseInt(sc.slice(5,7),16);
+                                const border = w > 0 ? `border:${w}px solid rgba(${sr},${sg2},${sb},${sop});` : 'border:none;';
+                                if (v.dash && w > 0) {
+                                    const scale = Math.max(1, w / 2);
+                                    const scaled = v.dash.split(',').map(Number).map((p,i) => i%2===1 ? Math.round(p*scale) : p);
+                                    legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;vertical-align:middle"><svg width="14" height="12"><rect x="${w/2}" y="${w/2}" width="${14-w}" height="${12-w}" fill="rgba(${fr},${fg},${fb},${op})" stroke="rgba(${sr},${sg2},${sb},${sop})" stroke-width="${w}" stroke-dasharray="${scaled.join(',')}" stroke-linecap="butt" rx="1"/></svg></span>`;
+                                } else {
+                                    legendHtml = `<span onclick="openVectorEditor('${g.id}','${v.id}')" style="cursor:pointer;display:inline-block;width:14px;height:12px;background:rgba(${fr},${fg},${fb},${op});${border}border-radius:2px;vertical-align:middle"></span>`;
+                                }
+                            }
                         }
+
+                        const collapseArrow = hasCat ? `<span onclick="toggleVectorCategoryCollapse('${v.id}')" style="cursor:pointer;font-size:0.6em;flex-shrink:0;user-select:none;transition:transform 0.2s;transform:rotate(${catCollapsed?'-90':'0'}deg)">▼</span>` : '';
+
                         row.innerHTML = `
                             <span style="cursor:grab;font-size:0.7em;opacity:0.3;flex-shrink:0;user-select:none">⠿</span>
-                            <span id="veye_${v.id}" onclick="toggleVector('${g.id}','${v.id}')" style="cursor:pointer;font-size:0.85em;flex-shrink:0;user-select:none">${vis ? '👁️' : '🙈'}</span>
+                            <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${vis?'checked':''} onchange="toggleVector('${g.id}','${v.id}')"><span class="slider"></span></label></span>
+                            ${collapseArrow}
                             <span style="flex-shrink:0;margin-right:4px">${legendHtml}</span>
                             <span id="vname_${v.id}" ondblclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" onclick="inlineRename(this,'vector-item','${g.id}|${v.id}','${v.name}')" style="flex:1;cursor:text;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.name}</span>
+                            <span onclick="zoomToVector('${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Centralizar na tela">🎯</span>
+                            <span onclick="openCategorize('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Categorizar por atributo">🏷️</span>
+                            <span onclick="downloadVector('${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Baixar">💾</span>
                             <span onclick="deleteVector('${g.id}','${v.id}')" style="cursor:pointer;opacity:0.4;font-size:0.72em;flex-shrink:0" title="Excluir">🗑️</span>
                         `;
                         gdiv.appendChild(row);
+
+                        // Category sub-items (only if categorized and expanded)
+                        if (hasCat && !catCollapsed) {
+                            v.categories.forEach((cat, ci) => {
+                                const catKey = `${v.id}_${ci}`;
+                                const catVis = vectorCategoryVisibility[catKey] !== false;
+                                const subrow = document.createElement('div');
+                                subrow.style.cssText = 'display:flex;align-items:center;gap:4px;padding:2px 12px 2px 52px;font-size:0.68em';
+                                let catLegend = '';
+                                if (vtype === 'point') {
+                                    const m = cat.marker || v.marker || '●'; const cop = cat.opacity ?? v.opacity ?? 0.6;
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;font-size:${Math.min(cat.markerSize||v.markerSize||16,14)}px;color:${cat.color};opacity:${cop}">${m}</span>`;
+                                } else if (vtype === 'line') {
+                                    const cop = cat.opacity ?? v.opacity ?? 0.6;
+                                    const w = Math.min(cat.weight||v.weight||2, 4);
+                                    const lr = parseInt(cat.color.slice(1,3),16), lg = parseInt(cat.color.slice(3,5),16), lb = parseInt(cat.color.slice(5,7),16);
+                                    let da = '';
+                                    if (cat.dash||v.dash) {
+                                        const scale = Math.max(1, w / 2);
+                                        const scaled = (cat.dash||v.dash).split(',').map(Number).map((p,i) => i%2===1 ? Math.round(p*scale) : p);
+                                        da = ` stroke-dasharray="${scaled.join(',')}"`;
+                                    }
+                                    const svgH = Math.max(w+2, 5);
+                                    catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;vertical-align:middle"><svg width="14" height="${svgH}"><line x1="0" y1="${svgH/2}" x2="14" y2="${svgH/2}" stroke="rgba(${lr},${lg},${lb},${cop})" stroke-width="${w}"${da} stroke-linecap="butt"/></svg></span>`;
+                                } else {
+                                    const sc = cat.strokeColor || v.strokeColor || '#333333';
+                                    const w = cat.weight || v.weight || 2;
+                                    const cop = cat.opacity ?? v.opacity ?? 0.6; const csop = cat.strokeOpacity ?? v.strokeOpacity ?? 1;
+                                    const fr = parseInt(cat.color.slice(1,3),16), fg = parseInt(cat.color.slice(3,5),16), fb = parseInt(cat.color.slice(5,7),16);
+                                    const sr = parseInt(sc.slice(1,3),16), sg2 = parseInt(sc.slice(3,5),16), sb = parseInt(sc.slice(5,7),16);
+                                    const border = w > 0 ? `border:${w}px solid rgba(${sr},${sg2},${sb},${csop});` : 'border:none;';
+                                    if ((cat.dash||v.dash) && w > 0) {
+                                        const scale = Math.max(1, w / 2);
+                                        const scaled = (cat.dash||v.dash).split(',').map(Number).map((p,i) => i%2===1 ? Math.round(p*scale) : p);
+                                        catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;vertical-align:middle"><svg width="12" height="10"><rect x="${w/2}" y="${w/2}" width="${12-w}" height="${10-w}" fill="rgba(${fr},${fg},${fb},${cop})" stroke="rgba(${sr},${sg2},${sb},${csop})" stroke-width="${w}" stroke-dasharray="${scaled.join(',')}" stroke-linecap="butt" rx="1"/></svg></span>`;
+                                    } else {
+                                        catLegend = `<span onclick="openCategoryEditor('${g.id}','${v.id}',${ci})" style="cursor:pointer;display:inline-block;width:12px;height:10px;background:rgba(${fr},${fg},${fb},${cop});${border}border-radius:2px;vertical-align:middle"></span>`;
+                                    }
+                                }
+
+                                subrow.innerHTML = `
+                                    <span style="flex-shrink:0"><label class="vis-toggle dark"><input type="checkbox" ${catVis?'checked':''} onchange="toggleVectorCategory('${v.id}',${ci})"><span class="slider"></span></label></span>
+                                    ${catLegend}
+                                    <span style="flex:1;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${cat.value}</span>
+                                    <span onclick="zoomToVectorCategory('${v.id}',${ci})" style="cursor:pointer;opacity:0.4;font-size:0.7em;flex-shrink:0" title="Centralizar na tela">🎯</span>
+                                `;
+                                gdiv.appendChild(subrow);
+                            });
+                        }
                     });
                 }
                 list.appendChild(gdiv);
             });
+            refreshVectorZOrder();
         }
 
         function toggleVectorGroupCollapse(gid) {
@@ -925,11 +1121,126 @@
         }
 
         function createVectorGroup() {
-            const name = prompt('Nome do grupo:');
-            if (!name) return;
-            fetch(`/api/vector/${projetoAtual}/group`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
-            }).then(r => r.json()).then(() => loadVectorGroups());
+            showGroupNameModal('Novo grupo de vetores', (name) => {
+                fetch(`/api/vector/${projetoAtual}/group`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name})
+                }).then(r => r.json()).then(() => loadVectorGroups());
+            });
+        }
+
+        // ===== DRAG & DROP HELPER =====
+        function makeDraggable(el, getDragData, onDrop) {
+            let dragCounter = 0;
+            el.draggable = true;
+            el.addEventListener('dragstart', e => {
+                e.stopPropagation(); // prevent parent from also starting drag
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', JSON.stringify(getDragData()));
+                el.style.opacity = '0.4';
+            });
+            el.addEventListener('dragend', e => {
+                e.stopPropagation();
+                el.style.opacity = '1';
+            });
+            el.addEventListener('dragenter', e => {
+                e.preventDefault();
+                dragCounter++;
+                el.style.borderTop = '2px solid #999';
+            });
+            el.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.stopPropagation(); // prevent parent from also handling
+            });
+            el.addEventListener('dragleave', e => {
+                dragCounter--;
+                if (dragCounter <= 0) { dragCounter = 0; el.style.borderTop = ''; }
+            });
+            el.addEventListener('drop', e => {
+                e.preventDefault();
+                e.stopPropagation(); // prevent parent from also handling
+                dragCounter = 0;
+                el.style.borderTop = '';
+                try {
+                    const from = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    onDrop(from);
+                } catch(err) { console.error('Drop error:', err); }
+            });
+        }
+
+        // ===== ZOOM HELPERS =====
+        function extendBoundsFromLayer(bounds, layer) {
+            try {
+                if (layer.getBounds) {
+                    const b = layer.getBounds();
+                    if (b.isValid()) bounds.extend(b);
+                } else if (layer.getLatLng) {
+                    bounds.extend(layer.getLatLng());
+                }
+            } catch(e) {}
+        }
+
+        function zoomToVectorCategory(vid, catIndex) {
+            if (!vectorLayers[vid]) return;
+            const bounds = L.latLngBounds([]);
+            for (const g of vectorGroups) {
+                const vec = g.vectors?.find(v => v.id === vid);
+                if (vec?.categories?.[catIndex]) {
+                    const catVal = vec.categories[catIndex].value;
+                    vectorLayers[vid].eachLayer(layer => {
+                        if (String(layer.feature?.properties?.[vec.categorizeColumn] || '') === catVal) {
+                            extendBoundsFromLayer(bounds, layer);
+                        }
+                    });
+                    const catKey = `${vid}_${catIndex}`;
+                    (vectorCategoryHiddenLayers[catKey] || []).forEach(layer => {
+                        if (String(layer.feature?.properties?.[vec.categorizeColumn] || '') === catVal) {
+                            extendBoundsFromLayer(bounds, layer);
+                        }
+                    });
+                    break;
+                }
+            }
+            if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+        }
+
+        async function zoomToVector(vid) {
+            if (!vectorLayers[vid]) {
+                for (const g of vectorGroups) {
+                    const vec = g.vectors?.find(v => v.id === vid);
+                    if (vec) {
+                        vectorVisibility[vid] = undefined;
+                        await toggleVector(g.id, vid, true);
+                        break;
+                    }
+                }
+            }
+            if (vectorLayers[vid]) {
+                try {
+                    const bounds = L.latLngBounds([]);
+                    vectorLayers[vid].eachLayer(layer => extendBoundsFromLayer(bounds, layer));
+                    if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+                } catch(e) {}
+            }
+        }
+
+        function zoomToRaster(gid, rid) {
+            for (const g of rasterGroups) {
+                if (g.id === gid) {
+                    const r = g.rasters?.find(x => x.id === rid);
+                    if (r?.bounds) {
+                        map.fitBounds(r.bounds, { padding: [50, 50], maxZoom: 17 });
+                    }
+                    break;
+                }
+            }
+        }
+
+        function downloadVector(vid) {
+            window.open(`/api/vector/${projetoAtual}/download/${vid}`, '_blank');
+        }
+
+        function downloadVectorGroup(gid) {
+            window.open(`/api/vector/${projetoAtual}/groups/${gid}/download`, '_blank');
         }
 
         function deleteVector(gid, vid) {
@@ -981,6 +1292,12 @@
             document.getElementById('vector-upload-input').value = '';
         }
 
+        function scaleDashArray(dashStr, weight) {
+            if (!dashStr) return null;
+            const scale = Math.max(1, (weight || 2) / 2);
+            return dashStr.split(',').map(Number).map((p, i) => i % 2 === 1 ? Math.round(p * scale) : p).join(',');
+        }
+
         function isVectorVisible(gid, vid) {
             return vectorGroupVisibility[gid] !== false && vectorVisibility[vid] !== false;
         }
@@ -1007,7 +1324,8 @@
                                 const kf = ld.files.find(f => f.endsWith('.kml') || f.endsWith('.kmz'));
                                 if (kf) { const r = await fetch(`/api/vector/${projetoAtual}/file/${kf}`); const t = await r.text(); gj = toGeoJSON.kml(new DOMParser().parseFromString(t,'text/xml')); }
                             } else {
-                                const r = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}`);
+                                const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                                const r = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}${layerParam}`);
                                 if (r.ok) gj = await r.json();
                             }
                             if (gj?.features?.[0]?.geometry?.type) {
@@ -1033,7 +1351,8 @@
                             geojson = toGeoJSON.kml(doc);
                             console.log('GeoJSON from KML:', JSON.stringify(geojson).substring(0, 300));
                         } else {
-                            const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}`);
+                            const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                            const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}${layerParam}`);
                             console.log('GeoJSON response status:', resp.status);
                             if (resp.ok) {
                                 const text = await resp.text();
@@ -1047,37 +1366,101 @@
                         }
                         console.log('Final geojson features:', geojson?.features?.length);
                         if (geojson && geojson.features && geojson.features.length > 0) {
-                            const color = vec.color || '#e74c3c';
-                            const opacity = vec.opacity ?? 0.6;
-                            const weight = vec.weight ?? 2;
-                            const strokeColor = vec.strokeColor || '#333333';
-                            const marker = vec.marker || '●';
-                            const markerSize = vec.markerSize || 16;
                             const isPoint = vec._detectedType === 'point';
                             const isLine = vec._detectedType === 'line';
-                            vectorLayers[vid] = L.geoJSON(geojson, {
-                                style: isPoint ? { opacity: opacity } : {
-                                    color: isLine ? color : strokeColor,
-                                    weight: weight,
-                                    fillColor: color,
-                                    fillOpacity: isLine ? 0 : opacity,
-                                    opacity: isLine ? opacity : 1
-                                },
-                                pointToLayer: isPoint ? (f, latlng) => {
-                                    return L.marker(latlng, {
-                                        icon: L.divIcon({
-                                            html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
-                                            className: '',
-                                            iconSize: [markerSize, markerSize],
-                                            iconAnchor: [markerSize/2, markerSize]
-                                        })
-                                    });
-                                } : null,
-                                onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
-                            }).addTo(map);
-                            if (vectorLayers[vid].getLayers().length === 0) {
-                                alert('Vetor carregado mas sem geometrias visíveis.');
+                            const hasCategories = vec.categorized && vec.categories && vec.categories.length > 0;
+
+                            let layerOpts;
+                            if (hasCategories) {
+                                // Categorized style: each category has full style properties
+                                const catMap = {};
+                                vec.categories.forEach((c, ci) => catMap[c.value] = { color: c.color, opacity: c.opacity, weight: c.weight, strokeColor: c.strokeColor, strokeOpacity: c.strokeOpacity, marker: c.marker, markerSize: c.markerSize, dash: c.dash, index: ci });
+                                const isPoint = vec._detectedType === 'point';
+                                const isLine = vec._detectedType === 'line';
+
+                                layerOpts = {
+                                    style: (feature) => {
+                                        const val = String(feature.properties?.[vec.categorizeColumn] || '');
+                                        const cat = catMap[val];
+                                        if (!cat) return { opacity: 0, fillOpacity: 0 };
+                                        if (isPoint) return { opacity: cat.opacity ?? 0.5 };
+                                        function hexToRgba(hex, alpha) {
+                                            const r = parseInt(hex.slice(1,3),16);
+                                            const g = parseInt(hex.slice(3,5),16);
+                                            const b = parseInt(hex.slice(5,7),16);
+                                            return `rgba(${r},${g},${b},${alpha})`;
+                                        }
+                                        return {
+                                            color: isLine ? hexToRgba(cat.color, cat.opacity ?? 0.5) : hexToRgba(cat.strokeColor || '#333333', cat.strokeOpacity ?? 1),
+                                            weight: cat.weight ?? 2,
+                                            fillColor: cat.color,
+                                            fillOpacity: isLine ? 0 : (cat.opacity ?? 0.5),
+                                            opacity: 1,
+                                            dashArray: scaleDashArray(cat.dash, cat.weight)
+                                        };
+                                    },
+                                    pointToLayer: isPoint ? (f, latlng) => {
+                                        const val = String(f.properties?.[vec.categorizeColumn] || '');
+                                        const cat = catMap[val];
+                                        if (!cat) return L.symbolMarker(latlng, { radius: 1, symbol: '', symbolSize: 1, color: 'transparent', opacity: 0 });
+                                        const mkr = cat.marker || '●';
+                                        const msz = cat.markerSize || 16;
+                                        return L.symbolMarker(latlng, {
+                                            radius: msz / 2 + 4,
+                                            symbol: mkr,
+                                            symbolSize: msz,
+                                            color: cat.color,
+                                            opacity: cat.opacity ?? 1
+                                        });
+                                        });
+                                    } : null,
+                                    onEachFeature: (f, l) => {
+                                        if (f.properties) {
+                                            l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados');
+                                        }
+                                    }
+                                };
+                            } else {
+                                // Single style (original)
+                                const color = vec.color || '#ffffff';
+                                const opacity = vec.opacity ?? 1;
+                                const weight = vec.weight ?? 2;
+                                const strokeColor = vec.strokeColor || '#333333';
+                                const strokeOpacity = vec.strokeOpacity ?? 1;
+                                const marker = vec.marker || '●';
+                                const markerSize = vec.markerSize || 16;
+
+                                // Helper: hex to rgba
+                                function hexToRgba(hex, alpha) {
+                                    const r = parseInt(hex.slice(1,3),16);
+                                    const g = parseInt(hex.slice(3,5),16);
+                                    const b = parseInt(hex.slice(5,7),16);
+                                    return `rgba(${r},${g},${b},${alpha})`;
+                                }
+
+                                layerOpts = {
+                                    style: isPoint ? { opacity: opacity } : {
+                                        color: isLine ? color : hexToRgba(strokeColor, strokeOpacity),
+                                        weight: weight,
+                                        fillColor: color,
+                                        fillOpacity: isLine ? 0 : opacity,
+                                        opacity: 1,
+                                        dashArray: scaleDashArray(vec.dash, weight)
+                                    },
+                                    pointToLayer: isPoint ? (f, latlng) => {
+                                        return L.marker(latlng, {
+                                            icon: L.divIcon({
+                                                html: `<span style="font-size:${markerSize}px;color:${color};opacity:${opacity}">${marker}</span>`,
+                                                className: '',
+                                                iconSize: [markerSize, markerSize],
+                                                iconAnchor: [markerSize/2, markerSize]
+                                            })
+                                        });
+                                    } : null,
+                                    onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
+                                };
                             }
+                            vectorLayers[vid] = L.geoJSON(geojson, {...layerOpts, renderer: L.canvas()}).addTo(map);
                             saveVectorGroups();
                         } else {
                             alert('Não foi possível converter o vetor. Formato: ' + vec.type);
@@ -1101,6 +1484,50 @@
         const VE_MARKERS = [
             '●','■','▲','◆','★','♦','⬟','⬡','◉','⊙','⊕','⊗','◈','▼','◀','▶'
         ];
+        const VE_DASHES = [
+            {name:'Contínua', value:null},
+            {name:'Tracejada', value:'10,8'},
+            {name:'Pontilhada', value:'3,6'},
+            {name:'Traço-ponto', value:'12,6,3,6'},
+            {name:'Traço-ponto-ponto', value:'12,4,3,4,3,4'},
+            {name:'Longa tracejada', value:'20,10'}
+        ];
+
+        function dashSvg(dashVal, color, width, height, weight) {
+            weight = weight || 2;
+            let da = '';
+            if (dashVal) {
+                const parts = dashVal.split(',').map(Number);
+                // Scale gaps proportionally to weight so thick strokes don't fill gaps
+                const scale = Math.max(1, weight / 2);
+                const scaled = parts.map((p, i) => i % 2 === 1 ? Math.round(p * scale) : p);
+                da = ` stroke-dasharray="${scaled.join(',')}"`;
+            }
+            return `<svg width="${width}" height="${height}" style="display:block"><line x1="0" y1="${height/2}" x2="${width}" y2="${height/2}" stroke="${color||'#333'}" stroke-width="${Math.min(weight,height-2)}"${da} stroke-linecap="butt"/></svg>`;
+        }
+
+        let _currentDashValue = null;
+
+        function initDashDropdown(currentVal, onChange) {
+            const btn = document.getElementById('ve-dash-btn');
+            const opts = document.getElementById('ve-dash-options');
+            _currentDashValue = currentVal;
+            const sel = VE_DASHES.find(d => d.value === currentVal) || VE_DASHES[0];
+            btn.innerHTML = dashSvg(sel.value, '#333', 120, 16) + `<span style="font-size:0.8em;color:#666;margin-left:auto">${sel.name}</span>`;
+            btn.onclick = (e) => { e.stopPropagation(); opts.style.display = opts.style.display==='none'?'block':'none'; };
+            document.addEventListener('click', () => opts.style.display='none');
+            opts.innerHTML = '';
+            VE_DASHES.forEach(d => {
+                const item = document.createElement('div');
+                item.style.cssText = 'padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:0.85em';
+                item.innerHTML = dashSvg(d.value, '#333', 80, 12) + `<span>${d.name}</span>`;
+                item.onmouseenter = () => item.style.background='#f5f5f5';
+                item.onmouseleave = () => item.style.background='white';
+                item.onclick = (e) => { e.stopPropagation(); opts.style.display='none'; _currentDashValue = d.value; btn.innerHTML = dashSvg(d.value, '#333', 120, 16) + `<span style="font-size:0.8em;color:#666;margin-left:auto">${d.name}</span>`; onChange(d.value); };
+                opts.appendChild(item);
+            });
+        }
+
         let veEditGid = null, veEditVid = null, veEditBackup = null;
 
         function detectVectorType(gid, vid) {
@@ -1119,11 +1546,329 @@
             return 'polygon';
         }
 
+        // ===== CATEGORIZE BY ATTRIBUTE =====
+        const CAT_PALETTE = [
+            '#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#34495e',
+            '#e84393','#00cec9','#6c5ce7','#fd79a8','#55efc4','#fab1a0','#74b9ff','#ffeaa7',
+            '#d63031','#0984e3','#00b894','#fdcb6e','#a29bfe','#00b5ad','#f19066','#636e72',
+            '#ff7675','#81ecec','#a29bfe','#636e72','#dfe6e9','#b2bec3','#c0392b','#2c3e50'
+        ];
+        let catGid = null, catVid = null, catColumn = null, catCategories = null;
+
+        async function openCategorize(gid, vid) {
+            catGid = gid; catVid = vid; catColumn = null; catCategories = null;
+            const group = vectorGroups.find(g => g.id === gid);
+            const vec = group?.vectors.find(v => v.id === vid);
+            if (!vec) return;
+            document.getElementById('cat-title').textContent = 'Categorizar: ' + vec.name;
+            document.getElementById('cat-loading').style.display = 'block';
+            document.getElementById('cat-content').style.display = 'none';
+            document.getElementById('cat-result').style.display = 'none';
+            document.getElementById('categorize-modal').style.display = 'flex';
+            try {
+                const layerParam = vec.gpkg_layer ? `?layer=${encodeURIComponent(vec.gpkg_layer)}` : '';
+                const resp = await fetch(`/api/vector/${projetoAtual}/geojson/${vid}/columns${layerParam}`);
+                if (!resp.ok) throw new Error('Erro ao ler atributos');
+                const data = await resp.json();
+                document.getElementById('cat-loading').style.display = 'none';
+                if (!data.columns || data.columns.length === 0) {
+                    document.getElementById('cat-content').innerHTML = '<div style="text-align:center;padding:20px;color:#888">Nenhuma coluna de atributos encontrada.</div>';
+                    document.getElementById('cat-content').style.display = 'block';
+                    return;
+                }
+                const colDiv = document.getElementById('cat-columns');
+                colDiv.innerHTML = '';
+                data.columns.forEach(col => {
+                    const btn = document.createElement('div');
+                    btn.style.cssText = 'padding:10px 12px;border:1px solid #e0e0e0;border-radius:8px;cursor:pointer;font-size:0.85em;transition:all 0.15s;background:white';
+                    btn.innerHTML = `<span style="font-weight:600">${col.name}</span> <span style="color:#888;font-size:0.85em">(${col.count} valores)</span>`;
+                    btn.onmouseenter = () => { btn.style.background = '#f0f0f0'; btn.style.borderColor = '#2c3e50'; };
+                    btn.onmouseleave = () => { btn.style.background = 'white'; btn.style.borderColor = '#e0e0e0'; };
+                    btn.onclick = () => selectCatColumn(col.name, col.values);
+                    colDiv.appendChild(btn);
+                });
+                document.getElementById('cat-content').style.display = 'block';
+            } catch(e) {
+                document.getElementById('cat-loading').textContent = 'Erro: ' + e.message;
+            }
+        }
+
+        function selectCatColumn(colName, values) {
+            catColumn = colName;
+            catCategories = values.map((v, i) => ({
+                value: v,
+                color: CAT_PALETTE[i % CAT_PALETTE.length],
+                opacity: 0.6,
+                weight: 2,
+                strokeColor: '#333333',
+                strokeOpacity: 1,
+                dash: null,
+                marker: '●',
+                markerSize: 16
+            }));
+            document.getElementById('cat-content').style.display = 'none';
+            document.getElementById('cat-result').style.display = 'block';
+            document.getElementById('cat-result-info').textContent = `Coluna: "${colName}" — ${values.length} categorias`;
+            renderCatCategories();
+        }
+
+        function renderCatCategories() {
+            const div = document.getElementById('cat-categories');
+            div.innerHTML = '';
+            if (!catCategories) return;
+            let vtype = 'polygon';
+            for (const g of vectorGroups) {
+                const vec = g?.vectors?.find(v => v.id === catVid);
+                if (vec) { vtype = vec._detectedType || 'polygon'; break; }
+            }
+            catCategories.forEach((cat, i) => {
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;transition:background 0.1s';
+                row.onmouseenter = () => row.style.background = '#f5f5f5';
+                row.onmouseleave = () => row.style.background = 'transparent';
+                // Hidden native picker, triggered by preview click
+                const pickerId = `catpicker_${i}`;
+                let preview = '';
+                if (vtype === 'line') {
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="display:inline-block;width:28px;height:3px;background:${cat.color};border-radius:1px;cursor:pointer" title="Editar cor"></span>`;
+                } else if (vtype === 'point') {
+                    const m = cat.marker || '●';
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="font-size:20px;color:${cat.color};cursor:pointer" title="Editar cor">${m}</span>`;
+                } else {
+                    preview = `<span onclick="document.getElementById('${pickerId}').click()" style="display:inline-block;width:22px;height:16px;background:${cat.color};border-radius:3px;cursor:pointer" title="Editar cor"></span>`;
+                }
+                row.innerHTML = `
+                    ${preview}
+                    <input type="color" id="${pickerId}" value="${cat.color}" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" onchange="catCategories[${i}].color=this.value;renderCatCategories()">
+                    <span style="flex:1;font-size:0.85em">${cat.value}</span>
+                `;
+                div.appendChild(row);
+            });
+        }
+
+        async function applyCategorize() {
+            if (!catColumn || !catCategories) return;
+            const group = vectorGroups.find(g => g.id === catGid);
+            const vec = group?.vectors.find(v => v.id === catVid);
+            if (!vec) return;
+            // Use vector's current style as base for categories
+            catCategories.forEach(c => {
+                c.opacity = vec.opacity ?? 1;
+                c.weight = vec.weight ?? 2;
+                c.strokeColor = vec.strokeColor || '#333333';
+                c.marker = vec.marker || '●';
+                c.markerSize = vec.markerSize || 16;
+            });
+            vec.categorized = true;
+            vec.categorizeColumn = catColumn;
+            vec.categories = JSON.parse(JSON.stringify(catCategories));
+            saveVectorGroups();
+            // Remove current layer to force reload with categorized style
+            if (vectorLayers[catVid]) { map.removeLayer(vectorLayers[catVid]); delete vectorLayers[catVid]; }
+            // Reset category visibility (all visible)
+            vec.categories.forEach((c, ci) => { delete vectorCategoryVisibility[`${catVid}_${ci}`]; });
+            // Expand category view
+            vectorCategoryCollapsed[catVid] = false;
+            // Force show with categorized style
+            vectorVisibility[catVid] = undefined; // reset so forceShow works
+            await toggleVector(catGid, catVid, true);
+            closeCategorize();
+            renderVectorMenu();
+        }
+
+        function closeCategorize() {
+            document.getElementById('categorize-modal').style.display = 'none';
+            catGid = null; catVid = null; catColumn = null; catCategories = null;
+        }
+
+        function toggleVectorCategoryCollapse(vid) {
+            vectorCategoryCollapsed[vid] = !vectorCategoryCollapsed[vid];
+            renderVectorMenu();
+        }
+
+        let vectorCategoryHiddenLayers = {};  // { "vid_ci": [layer, ...] }
+
+        function toggleVectorCategory(vid, catIndex) {
+            const catKey = `${vid}_${catIndex}`;
+            const wasVisible = vectorCategoryVisibility[catKey] !== false;
+            vectorCategoryVisibility[catKey] = !wasVisible;
+            for (const g of vectorGroups) {
+                const vec = g.vectors?.find(v => v.id === vid);
+                if (vec?.categories?.[catIndex] && vectorLayers[vid]) {
+                    const catVal = vec.categories[catIndex].value;
+                    if (wasVisible) {
+                        // Hide: remove layers and store them
+                        const hidden = [];
+                        vectorLayers[vid].eachLayer(layer => {
+                            const featVal = String(layer.feature?.properties?.[vec.categorizeColumn] || '');
+                            if (featVal === catVal) {
+                                vectorLayers[vid].removeLayer(layer);
+                                hidden.push(layer);
+                            }
+                        });
+                        vectorCategoryHiddenLayers[catKey] = hidden;
+                    } else {
+                        // Show: re-add stored layers
+                        const hidden = vectorCategoryHiddenLayers[catKey] || [];
+                        hidden.forEach(layer => vectorLayers[vid].addLayer(layer));
+                        delete vectorCategoryHiddenLayers[catKey];
+                    }
+                    break;
+                }
+            }
+            renderVectorMenu();
+        }
+
+        let catEditGid = null, catEditVid = null, catEditIndex = null;
+
+        function openCategoryEditor(gid, vid, catIndex) {
+            catEditGid = gid; catEditVid = vid; catEditIndex = catIndex;
+            const group = vectorGroups.find(g => g.id === gid);
+            const vec = group?.vectors.find(v => v.id === vid);
+            if (!vec || !vec.categories?.[catIndex]) return;
+            const cat = vec.categories[catIndex];
+            const vtype = vec._detectedType || detectVectorType(gid, vid);
+
+            // Reuse the vector editor but with category title
+            document.getElementById('ve-title').textContent = cat.value;
+            const typeLabels = {polygon:'Polígono',line:'Linha',point:'Ponto'};
+            document.getElementById('ve-type').textContent = `Categoria — Tipo: ` + (typeLabels[vtype]||vtype);
+
+            // Color
+            const color = cat.color || '#ffffff';
+            document.getElementById('ve-color-picker').value = color;
+            document.getElementById('ve-color-hex').value = color;
+            const grid = document.getElementById('ve-color-grid');
+            grid.innerHTML = '';
+            VE_COLORS.forEach(c => {
+                const d = document.createElement('div');
+                d.style.cssText = `width:16px;height:16px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===color?'#333':'transparent'}`;
+                d.onclick = () => { document.getElementById('ve-color-picker').value=c; document.getElementById('ve-color-hex').value=c; updateCatPreview(); grid.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                grid.appendChild(d);
+            });
+            document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
+
+            // Opacity
+            const op = Math.round((cat.opacity??1)*100);
+            document.getElementById('ve-opacity').value = op;
+            document.getElementById('ve-opacity-val').textContent = op+'%';
+            document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
+            document.getElementById('ve-opacity-fill').style.background = color;
+            document.getElementById('ve-opacity-fill').style.opacity = op/100;
+
+            // Weight
+            const ws = document.getElementById('ve-weight-section');
+            ws.style.display = (vtype==='line'||vtype==='polygon')?'block':'none';
+            if (vtype==='line'||vtype==='polygon') {
+                document.getElementById('ve-weight').value = cat.weight??vec.weight??2;
+                document.getElementById('ve-weight-val').textContent = (cat.weight??vec.weight??2)+'px';
+                const strokeOpVal = cat.strokeOpacity!=null ? Math.round(cat.strokeOpacity*100) : (vec.strokeOpacity!=null ? Math.round(vec.strokeOpacity*100) : 100);
+                document.getElementById('ve-stroke-opacity').value = strokeOpVal;
+                document.getElementById('ve-stroke-opacity-val').textContent = strokeOpVal+'%';
+                document.getElementById('ve-stroke-opacity-fill').style.opacity = strokeOpVal/100;
+            }
+            // Dash pattern (line and polygon)
+            const ds = document.getElementById('ve-dash-section');
+            ds.style.display = (vtype==='line'||vtype==='polygon')?'block':'none';
+            if (vtype==='line'||vtype==='polygon') {
+                vec._selDash = cat.dash ?? vec.dash ?? null;
+                initDashDropdown(vec._selDash, (val) => { vec._selDash = val; updateCatPreview(); });
+            }
+
+            // Stroke (polygon only)
+            const ss = document.getElementById('ve-stroke-section');
+            ss.style.display = vtype==='polygon'?'block':'none';
+            if (vtype==='polygon') {
+                const sc = cat.strokeColor||vec.strokeColor||'#333333';
+                document.getElementById('ve-stroke-picker').value = sc;
+                document.getElementById('ve-stroke-hex').value = sc;
+                const sg = document.getElementById('ve-stroke-color-grid');
+                sg.innerHTML = '';
+                VE_COLORS.forEach(c => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:14px;height:14px;border-radius:3px;background:${c};cursor:pointer;border:2px solid ${c===sc?'#333':'transparent'}`;
+                    d.onclick = () => { document.getElementById('ve-stroke-picker').value=c; document.getElementById('ve-stroke-hex').value=c; updateCatPreview(); sg.querySelectorAll('div').forEach(x=>x.style.borderColor=x.style.background===c?'#333':'transparent'); };
+                    sg.appendChild(d);
+                });
+            }
+
+            // Markers (point only)
+            const ms = document.getElementById('ve-marker-section');
+            ms.style.display = vtype==='point'?'block':'none';
+            if (vtype==='point') {
+                const mg = document.getElementById('ve-markers-grid');
+                mg.innerHTML = '';
+                const selM = cat.marker||vec.marker||'●';
+                VE_MARKERS.forEach(m => {
+                    const d = document.createElement('div');
+                    d.style.cssText = `width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border-radius:6px;border:2px solid ${m===selM?'#333':'#ddd'};background:${m===selM?'#f0f0f0':'white'}`;
+                    d.textContent = m;
+                    d.onclick = () => { mg.querySelectorAll('div').forEach(x=>{x.style.borderColor='#ddd';x.style.background='white'}); d.style.borderColor='#333'; d.style.background='#f0f0f0'; vec._selMarker=m; updateCatPreview(); };
+                    if(m===selM){d.style.borderColor='#333';d.style.background='#f0f0f0';}
+                    mg.appendChild(d);
+                });
+                document.getElementById('ve-marker-size').value = cat.markerSize||vec.markerSize||16;
+                document.getElementById('ve-marker-size-val').textContent = (cat.markerSize||vec.markerSize||16)+'px';
+            }
+
+            // Events
+            document.getElementById('ve-color-picker').oninput = e => { document.getElementById('ve-color-hex').value=e.target.value; updateCatPreview(); };
+            document.getElementById('ve-color-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-color-picker').value=e.target.value; updateCatPreview();} };
+            document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateCatPreview(); };
+            document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateCatPreview(); };
+            document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateCatPreview(); };
+            document.getElementById('ve-stroke-opacity').oninput = e => { document.getElementById('ve-stroke-opacity-val').textContent=e.target.value+'%'; document.getElementById('ve-stroke-opacity-fill').style.opacity=e.target.value/100; updateCatPreview(); };
+            document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateCatPreview();} };
+            document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateCatPreview(); };
+
+            // Override save for category editing
+            const saveBtn = document.getElementById('ve-save-btn');
+            if (saveBtn) saveBtn.onclick = () => saveCategoryStyle();
+            const cancelBtn = document.getElementById('ve-cancel-btn');
+            if (cancelBtn) cancelBtn.onclick = () => document.getElementById('vector-editor').style.display = 'none';
+
+            updateCatPreview();
+            document.getElementById('vector-editor').style.display = 'flex';
+        }
+
+        function updateCatPreview() {
+            updateVePreview();
+        }
+
+        function saveCategoryStyle() {
+            const group = vectorGroups.find(g => g.id === catEditGid);
+            const vec = group?.vectors.find(v => v.id === catEditVid);
+            if (!vec || !vec.categories?.[catEditIndex]) return;
+            const cat = vec.categories[catEditIndex];
+
+            cat.color = document.getElementById('ve-color-picker').value;
+            cat.opacity = parseInt(document.getElementById('ve-opacity').value) / 100;
+            cat.weight = parseInt(document.getElementById('ve-weight').value);
+            cat.strokeColor = document.getElementById('ve-stroke-picker').value;
+            cat.strokeOpacity = parseInt(document.getElementById('ve-stroke-opacity').value) / 100;
+            cat.marker = vec._selMarker || cat.marker || '●';
+            cat.markerSize = parseInt(document.getElementById('ve-marker-size').value) || 16;
+            cat.dash = vec._selDash;
+
+            saveVectorGroups();
+            // Refresh layer
+            if (vectorLayers[catEditVid]) { map.removeLayer(vectorLayers[catEditVid]); delete vectorLayers[catEditVid]; }
+            vectorVisibility[catEditVid] = undefined;
+            toggleVector(catEditGid, catEditVid, true);
+            document.getElementById('vector-editor').style.display = 'none';
+            renderVectorMenu();
+        }
+
         function openVectorEditor(gid, vid) {
             const group = vectorGroups.find(g => g.id === gid);
             const vec = group?.vectors.find(v => v.id === vid);
             if (!vec) return;
             veEditGid = gid; veEditVid = vid;
+            // Reset button handlers to vector edit mode
+            const saveBtn = document.getElementById('ve-save-btn');
+            const cancelBtn = document.getElementById('ve-cancel-btn');
+            if (saveBtn) saveBtn.onclick = () => applyVectorEdit();
+            if (cancelBtn) cancelBtn.onclick = () => cancelVectorEdit();
             veEditBackup = JSON.parse(JSON.stringify(vec));
             const vtype = detectVectorType(gid, vid);
 
@@ -1132,7 +1877,7 @@
             document.getElementById('ve-type').textContent = 'Tipo: ' + (typeLabels[vtype]||vtype);
 
             // Color
-            const color = vec.color || '#e74c3c';
+            const color = vec.color || '#ffffff';
             document.getElementById('ve-color-picker').value = color;
             document.getElementById('ve-color-hex').value = color;
             const grid = document.getElementById('ve-color-grid');
@@ -1146,7 +1891,7 @@
             document.getElementById('ve-color-label').textContent = vtype==='line'?'Cor da linha':vtype==='point'?'Cor do marcador':'Cor do preenchimento';
 
             // Opacity
-            const op = Math.round((vec.opacity??0.6)*100);
+            const op = Math.round((vec.opacity??1)*100);
             document.getElementById('ve-opacity').value = op;
             document.getElementById('ve-opacity-val').textContent = op+'%';
             document.getElementById('ve-opacity-label').textContent = vtype==='line'?'Transparência da linha':vtype==='point'?'Transparência do marcador':'Transparência do preenchimento';
@@ -1159,6 +1904,16 @@
             if (vtype==='line'||vtype==='polygon') {
                 document.getElementById('ve-weight').value = vec.weight??2;
                 document.getElementById('ve-weight-val').textContent = (vec.weight??2)+'px';
+                document.getElementById('ve-stroke-opacity').value = (vec.strokeOpacity??1)*100;
+                document.getElementById('ve-stroke-opacity-val').textContent = Math.round((vec.strokeOpacity??1)*100)+'%';
+                document.getElementById('ve-stroke-opacity-fill').style.opacity = (vec.strokeOpacity??1);
+            }
+            // Dash pattern (line and polygon)
+            const ds = document.getElementById('ve-dash-section');
+            ds.style.display = (vtype==='line'||vtype==='polygon')?'block':'none';
+            if (vtype==='line'||vtype==='polygon') {
+                vec._selDash = vec.dash ?? null;
+                initDashDropdown(vec._selDash, (val) => { vec._selDash = val; updateVePreview(); });
             }
 
             // Stroke (polygon only)
@@ -1203,6 +1958,7 @@
             document.getElementById('ve-opacity').oninput = e => { document.getElementById('ve-opacity-val').textContent=e.target.value+'%'; updateVePreview(); };
             document.getElementById('ve-weight').oninput = e => { document.getElementById('ve-weight-val').textContent=e.target.value+'px'; updateVePreview(); };
             document.getElementById('ve-stroke-picker').oninput = e => { document.getElementById('ve-stroke-hex').value=e.target.value; updateVePreview(); };
+            document.getElementById('ve-stroke-opacity').oninput = e => { document.getElementById('ve-stroke-opacity-val').textContent=e.target.value+'%'; document.getElementById('ve-stroke-opacity-fill').style.opacity=e.target.value/100; updateVePreview(); };
             document.getElementById('ve-stroke-hex').oninput = e => { if(/^#[0-9a-f]{6}$/i.test(e.target.value)){document.getElementById('ve-stroke-picker').value=e.target.value; updateVePreview();} };
             document.getElementById('ve-marker-size').oninput = e => { document.getElementById('ve-marker-size-val').textContent=e.target.value+'px'; updateVePreview(); };
 
@@ -1215,21 +1971,48 @@
             const op = parseInt(document.getElementById('ve-opacity').value)/100;
             const weight = parseInt(document.getElementById('ve-weight').value)||0;
             const strokeColor = document.getElementById('ve-stroke-picker').value;
+            
             const markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
-            const group = vectorGroups.find(g=>g.id===veEditGid);
-            const vec = group?.vectors.find(v=>v.id===veEditVid);
-            const vtype = detectVectorType(veEditGid, veEditVid);
+            const egid = veEditGid || catEditGid;
+            const evid = veEditVid || catEditVid;
+            const group = vectorGroups.find(g=>g.id===egid);
+            const vec = group?.vectors.find(v=>v.id===evid);
+            const vtype = vec?._detectedType || detectVectorType(egid, evid);
             const preview = document.getElementById('ve-preview');
-            document.getElementById('ve-opacity-fill').style.background = color;
-            document.getElementById('ve-opacity-fill').style.opacity = op;
+            const opFill = document.getElementById('ve-opacity-fill');
+            if (opFill) { opFill.style.background = color; opFill.style.opacity = op; }
 
             if (vtype==='point') {
                 const m = vec?._selMarker || vec?.marker || '●';
                 preview.innerHTML = `<span style="font-size:${markerSize}px;color:${color};opacity:${op}">${m}</span>`;
             } else if (vtype==='line') {
-                preview.innerHTML = `<div style="width:100%;height:4px;background:${color};opacity:${op};border-radius:2px"></div>`;
+                const selDash = _currentDashValue;
+                const h = Math.max(2, Math.min(weight, 10));
+                let da = '';
+                if (selDash) {
+                    const parts = selDash.split(',').map(Number);
+                    const scale = Math.max(1, h / 2);
+                    const scaled = parts.map((p, i) => i % 2 === 1 ? Math.round(p * scale) : p);
+                    da = ` stroke-dasharray="${scaled.join(',')}"`;
+                }
+                const svgH = h + 8;
+                preview.innerHTML = `<svg width="100%" height="${svgH}" style="display:block"><line x1="0" y1="${svgH/2}" x2="100%" y2="${svgH/2}" stroke="${color}" stroke-width="${h}" opacity="${op}"${da} stroke-linecap="butt"/></svg>`;
             } else {
-                preview.innerHTML = `<div style="width:80px;height:50px;background:${color};opacity:${op};border:${weight}px solid ${strokeColor};border-radius:4px"></div>`;
+                const hr = parseInt(color.slice(1,3),16), hg = parseInt(color.slice(3,5),16), hb = parseInt(color.slice(5,7),16);
+                const sr = parseInt(strokeColor.slice(1,3),16), sg = parseInt(strokeColor.slice(3,5),16), sb = parseInt(strokeColor.slice(5,7),16);
+                const strokeOp = parseInt(document.getElementById('ve-stroke-opacity').value)/100;
+                const selDash = _currentDashValue;
+                let da = '';
+                if (weight > 0) {
+                    if (selDash) {
+                        const scale = Math.max(1, weight / 2);
+                        const scaled = selDash.split(',').map(Number).map((p,i) => i%2===1 ? Math.round(p*scale) : p);
+                        da = ` stroke-dasharray="${scaled.join(',')}"`;
+                    }
+                    preview.innerHTML = `<svg width="80" height="50" style="display:block"><rect x="${weight/2}" y="${weight/2}" width="${80-weight}" height="${50-weight}" fill="rgba(${hr},${hg},${hb},${op})" stroke="rgba(${sr},${sg},${sb},${strokeOp})" stroke-width="${weight}"${da} stroke-linecap="butt" rx="3"/></svg>`;
+                } else {
+                    preview.innerHTML = `<div style="width:80px;height:50px;background:rgba(${hr},${hg},${hb},${op});border:none;border-radius:4px"></div>`;
+                }
             }
         }
 
@@ -1243,10 +2026,12 @@
             if (!vec) { closeVectorEditor(); return; }
             vec.color = document.getElementById('ve-color-picker').value;
             vec.opacity = parseInt(document.getElementById('ve-opacity').value)/100;
-            vec.weight = parseInt(document.getElementById('ve-weight').value)||2;
+            vec.weight = parseInt(document.getElementById('ve-weight').value);
             vec.strokeColor = document.getElementById('ve-stroke-picker').value;
+            vec.strokeOpacity = parseInt(document.getElementById('ve-stroke-opacity').value)/100;
             vec.marker = vec._selMarker || vec.marker || '●';
             vec.markerSize = parseInt(document.getElementById('ve-marker-size').value)||16;
+            vec.dash = vec._selDash;
             delete vec._selMarker;
             saveVectorGroups();
             // Apply to layer
@@ -1260,28 +2045,30 @@
                         }
                     });
                 } else {
-                    const style = {
-                        color: vtype==='polygon' ? vec.strokeColor : vec.color,
-                        weight: vec.weight,
-                        fillColor: vec.color,
-                        fillOpacity: vec.opacity,
-                        opacity: vtype==='line' ? vec.opacity : 1
-                    };
-                    vectorLayers[veEditVid].setStyle(style);
+                    // Force layer recreation for style to apply correctly
+                    if (vectorLayers[veEditVid]) { map.removeLayer(vectorLayers[veEditVid]); delete vectorLayers[veEditVid]; }
+                    vectorVisibility[veEditVid] = undefined;
+                    toggleVector(veEditGid, veEditVid, true);
                 }
             }
             closeVectorEditor();
-            loadVectorGroups();
+            renderVectorMenu();
         }
 
         function refreshVectorZOrder() {
-            vectorGroups.forEach(g => {
-                g.vectors.slice().reverse().forEach(v => {
-                    if (vectorLayers[v.id] && vectorVisibility[v.id]) {
-                        vectorLayers[v.id].bringToFront();
+            // QGIS: top of list = top of map
+            // Collect all visible layers in list order
+            const ordered = [];
+            for (const g of vectorGroups) {
+                for (const v of g.vectors) {
+                    if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
+                        ordered.push(vectorLayers[v.id]);
                     }
-                });
-            });
+                }
+            }
+            // Remove all, then re-add in order (first added = bottom, last added = top)
+            ordered.forEach(l => map.removeLayer(l));
+            ordered.forEach(l => map.addLayer(l));
         }
 
         async function autoShowExistingVectors() {
@@ -1367,7 +2154,6 @@
             document.getElementById('projeto-nome').textContent = '📁 ' + projetos[id].nome;
             document.getElementById('page-subtitle').textContent = projetos[id].nome;
             if (!map) initMap(); else setTimeout(() => map.invalidateSize(), 100);
-            carregarCamadas();
             checkCustomRaster();
             loadVectorGroups();
             autoShowExistingVectors();
@@ -1395,71 +2181,6 @@
         function mostrarView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-        }
-
-        // ===== CAMADAS =====
-        function carregarCamadas() {
-            fetch(`/api/projects/${projetoAtual}/layers`).then(r => r.json()).then(data => {
-                const lista = document.getElementById('layers-list');
-                lista.innerHTML = '';
-                if (!data.layers || data.layers.length === 0) {
-                    lista.innerHTML = '<div class="empty-state" style="padding:20px"><p style="font-size:0.85em">Nenhuma camada</p></div>';
-                    return;
-                }
-                data.layers.forEach(layer => {
-                    const div = document.createElement('div');
-                    div.className = 'layer-item';
-                    div.innerHTML = `<div><div class="layer-name">${layer.name}</div><div class="layer-type">.${layer.type}</div></div><div class="toggle on" onclick="toggleCamada(this, '${layer.filename}')"></div>`;
-                    lista.appendChild(div);
-                });
-            });
-        }
-
-        function toggleCamada(btn, filename) {
-            const isOn = btn.classList.toggle('on');
-            if (isOn) {
-                carregarCamadaGeoJSON(filename);
-            } else if (overlays[filename]) {
-                map.removeLayer(overlays[filename]);
-            }
-        }
-
-        function carregarCamadaGeoJSON(filename) {
-            if (overlays[filename]) { map.addLayer(overlays[filename]); return; }
-            fetch(`/api/projects/${projetoAtual}/file/${filename}`).then(r => {
-                if (!r.ok) return null;
-                const ct = r.headers.get('content-type');
-                if (ct && ct.includes('geojson')) return r.json();
-                return r.text();
-            }).then(data => {
-                if (!data) return;
-                try {
-                    let geojson;
-                    if (typeof data === 'string') {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(data, 'text/xml');
-                        geojson = toGeoJSON.kml(doc);
-                    } else {
-                        geojson = data;
-                    }
-                    overlays[filename] = L.geoJSON(geojson, {
-                        style: { color: '#1a1a1a', weight: 2, fillColor: '#333', fillOpacity: 0.3 },
-                        onEachFeature: (f, l) => { if (f.properties) l.bindPopup(Object.entries(f.properties).filter(([k,v]) => v && typeof v !== 'object').map(([k,v]) => `<b>${k}</b>: ${v}`).join('<br>') || 'Sem dados'); }
-                    }).addTo(map);
-                    map.fitBounds(overlays[filename].getBounds());
-                } catch (e) { console.error('Erro ao carregar camada:', e); }
-            });
-        }
-
-        // ===== UPLOAD =====
-        function uploadFiles(files) {
-            if (!projetoAtual) return;
-            const fd = new FormData();
-            Array.from(files).forEach(f => fd.append('file', f));
-            fetch(`/api/projects/${projetoAtual}/upload`, { method: 'POST', body: fd })
-            .then(r => r.json()).then(data => { if (data.success) carregarCamadas(); else alert(data.error || 'Erro ao enviar'); })
-            .catch(e => alert('Erro: ' + e.message));
-            document.getElementById('file-input').value = '';
         }
 
         // Init
