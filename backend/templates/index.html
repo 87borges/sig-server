@@ -1973,12 +1973,14 @@
 
         function closeVectorEditor() { document.getElementById('vector-editor').style.display='none'; }
 
-        function cancelVectorEdit() { closeVectorEditor(); }
+        function cancelVectorEdit() { closeVectorEditor();
+                refreshVectorZOrder(); }
 
         function applyVectorEdit() {
             const group = vectorGroups.find(g=>g.id===veEditGid);
             const vec = group?.vectors.find(v=>v.id===veEditVid);
-            if (!vec) { closeVectorEditor(); return; }
+            if (!vec) { closeVectorEditor();
+                refreshVectorZOrder(); return; }
             vec.color = document.getElementById('ve-color-picker').value;
             vec.opacity = parseInt(document.getElementById('ve-opacity').value)/100;
             vec.weight = parseInt(document.getElementById('ve-weight').value);
@@ -2007,6 +2009,7 @@
                 }
             }
             closeVectorEditor();
+                refreshVectorZOrder();
             renderVectorMenu();
         }
 
