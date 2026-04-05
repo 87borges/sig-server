@@ -1448,7 +1448,7 @@
                                         dashArray: scaleDashArray(vec.dash, weight)
                                     },
                                     pointToLayer: isPoint ? (f, latlng) => {
-                                        return L.symbolMarker(latlng, {
+                                        return new L.SymbolMarker(latlng, {
                                             radius: markerSize / 2 + 4,
                                             symbol: marker,
                                             symbolSize: markerSize,
