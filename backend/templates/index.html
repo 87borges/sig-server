@@ -2023,20 +2023,26 @@
         }
 
         function refreshVectorZOrder() {
-            // QGIS: top of list = top of map
-            // Canvas renderer: bringToFront moves layer to end of draw list
-            // Process bottom-to-top so first item in list gets final bringToFront = top of map
-            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
+            // Recreate all layers from scratch in list order (like page reload!)
+            let toRecreate = [];
+            for (let gi = 0; gi < vectorGroups.length; gi++) {
                 const g = vectorGroups[gi];
-                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
+                for (let vi = 0; vi < g.vectors.length; vi++) {
                     const v = g.vectors[vi];
                     if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
-                        vectorLayers[v.id].eachLayer(l => {
-                            if (l.bringToFront) l.bringToFront();
-                        });
+                        toRecreate.push({ gid: g.id, vid: v.id });
                     }
                 }
             }
+            if (toRecreate.length === 0) return;
+            toRecreate.forEach(item => {
+                if (vectorLayers[item.vid]) { map.removeLayer(vectorLayers[item.vid]); delete vectorLayers[item.vid]; }
+            });
+            (async function() {
+                for (let i = 0; i < toRecreate.length; i++) {
+                    await toggleVector(toRecreate[i].gid, toRecreate[i].vid, true);
+                }
+            })();
         }
 
         async function autoShowExistingVectors() {
