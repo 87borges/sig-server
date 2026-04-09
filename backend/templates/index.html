@@ -79,7 +79,7 @@
         @media (max-width: 768px) {
         .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
     .leaflet-control-scale-line { font-weight: 700 !important; font-size: 12px !important; padding: 2px 6px !important; }
-#map { overflow: hidden !important; }
+#map { overflow: hidden !important; background: #1a1a1a !important; }
 </style>
 </head>
 <body>
@@ -362,8 +362,9 @@
                 if (wrapper) {
                     wrapper.style.transform = '';
                     wrapper.style.transition = 'transform 0.3s ease';
-                    setTimeout(function() { map.invalidateSize(); }, 350);
                 }
+                _restoreDrag();
+                setTimeout(function() { map.invalidateSize(); }, 350);
                 _setToolActive('tb-compass', false);
             } else {
                 var CompassWidget = L.Control.extend({
@@ -403,31 +404,22 @@
                                 var pane = mapEl.querySelector('.leaflet-map-pane');
                                 rotWrapper = document.createElement('div');
                                 rotWrapper.id = 'map-rotation-wrapper';
-                                rotWrapper.style.cssText = 'position:absolute;inset:0;transform-origin:center center';
+                                rotWrapper.style.cssText = 'position:absolute;inset:0;transform-origin:center center;overflow:visible';
                                 pane.parentNode.insertBefore(rotWrapper, pane);
                                 rotWrapper.appendChild(pane);
                             }
                             if (deg === 0) {
                                 rotWrapper.style.transition = 'transform 0.3s ease';
                                 rotWrapper.style.transform = '';
-                                setTimeout(function() { map.invalidateSize(); }, 350);
+                                _restoreDrag();
                             } else {
-                                var w = mapEl.offsetWidth;
-                                var h = mapEl.offsetHeight;
-                                var rad = Math.abs(deg) * Math.PI / 180;
-                                var cosR = Math.abs(Math.cos(rad));
-                                var sinR = Math.abs(Math.sin(rad));
-                                var sc = Math.max(
-                                    (w * cosR + h * sinR) / w,
-                                    (w * sinR + h * cosR) / h
-                                );
-                                sc = Math.ceil(sc * 100) / 100;
                                 rotWrapper.style.transition = dragging ? '' : 'transform 0.3s ease';
-                                rotWrapper.style.transform = 'rotate(' + (-deg) + 'deg) scale(' + sc + ')';
-                                setTimeout(function() { map.invalidateSize(); }, 350);
+                                rotWrapper.style.transform = 'rotate(' + (-deg) + 'deg)';
+                                _patchDrag(currentRot);
                             }
                             svgBox.style.transition = 'transform 0.2s ease';
                             svgBox.style.transform = 'rotate(' + deg + 'deg)';
+                            setTimeout(function() { map.invalidateSize(); }, 350);
                         }
                         function onDown(e) {
                             e.preventDefault();
@@ -462,6 +454,40 @@
                 compassControl.addTo(map);
                 _setToolActive('tb-compass', true);
             }
+        }
+
+        var _origOnMove = null;
+        function _patchDrag(deg) {
+            if (_origOnMove) return;
+            var drag = map.dragging;
+            if (!drag || !drag._draggable) return;
+            var draggable = drag._draggable;
+            _origOnMove = draggable._onMove;
+            var rad = -deg * Math.PI / 180;
+            draggable._onMove = function(e) {
+                if (deg === 0 || !draggable._startPoint) {
+                    _origOnMove.call(draggable, e);
+                    return;
+                }
+                var startX = draggable._startPoint.x;
+                var startY = draggable._startPoint.y;
+                var dx = e.clientX - startX;
+                var dy = e.clientY - startY;
+                var rdx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                var rdy = dx * Math.sin(rad) + dy * Math.cos(rad);
+                var fakeE = {};
+                for (var k in e) fakeE[k] = e[k];
+                fakeE.clientX = startX + rdx;
+                fakeE.clientY = startY + rdy;
+                _origOnMove.call(draggable, fakeE);
+            };
+        }
+
+        function _restoreDrag() {
+            var drag = map.dragging;
+            if (!drag || !drag._draggable || !_origOnMove) return;
+            drag._draggable._onMove = _origOnMove;
+            _origOnMove = null;
         }
 
         function toggleTestTool(n) {
