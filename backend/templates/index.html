@@ -359,17 +359,64 @@
                 compassControl = null;
                 _setToolActive('tb-compass', false);
             } else {
-                var CompassRose = L.Control.extend({
+                var CompassWidget = L.Control.extend({
                     options: { position: 'topright' },
                     onAdd: function(m) {
-                        var div = L.DomUtil.create('div', '');
-                        div.innerHTML = '<div style="width:80px;height:80px"><svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.7)" stroke="#555" stroke-width="1.5"/><polygon points="50,8 54,44 50,38 46,44" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/><polygon points="50,92 54,56 50,62 46,56" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="8,50 44,46 38,50 44,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="92,50 56,46 62,50 56,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><circle cx="50" cy="50" r="4" fill="#555"/><text x="50" y="7" text-anchor="middle" font-size="10" font-weight="bold" fill="#c0392b">N</text><text x="50" y="99" text-anchor="middle" font-size="8" fill="#666">S</text><text x="4" y="53" text-anchor="middle" font-size="8" fill="#666">O</text><text x="96" y="53" text-anchor="middle" font-size="8" fill="#666">L</text></svg></div>';
-                        div.style.background = 'none';
-                        div.style.border = 'none';
-                        return div;
+                        var wrap = L.DomUtil.create('div', 'compass-widget');
+                        wrap.style.cssText = 'position:relative;width:90px;height:90px;user-select:none';
+                        var ring = L.DomUtil.create('div', '', wrap);
+                        ring.style.cssText = 'position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,0.6);box-shadow:0 2px 10px rgba(0,0,0,0.2);cursor:grab;border:2px solid rgba(0,0,0,0.15)';
+                        var svgBox = L.DomUtil.create('div', '', wrap);
+                        svgBox.id = 'compass-svg-box';
+                        svgBox.style.cssText = 'position:absolute;top:5px;left:5px;width:80px;height:80px;pointer-events:none';
+                        svgBox.innerHTML = '<svg viewBox="0 0 100 100" width="80" height="80"><polygon points="50,10 54,44 50,38 46,44" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/><polygon points="50,90 54,56 50,62 46,56" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="10,50 44,46 38,50 44,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="90,50 56,46 62,50 56,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><circle cx="50" cy="50" r="3" fill="#555"/><text x="50" y="8" text-anchor="middle" font-size="9" font-weight="bold" fill="#c0392b">N</text><text x="50" y="98" text-anchor="middle" font-size="7" fill="#888">S</text><text x="3" y="53" text-anchor="middle" font-size="7" fill="#888">O</text><text x="97" y="53" text-anchor="middle" font-size="7" fill="#888">L</text></svg>';
+                        var dragging = false;
+                        var startAngle = 0;
+                        var currentRot = 0;
+                        function getAngle(e) {
+                            var rect = wrap.getBoundingClientRect();
+                            var cx = rect.left + rect.width / 2;
+                            var cy = rect.top + rect.height / 2;
+                            var px = e.clientX || (e.touches && e.touches[0].clientX);
+                            var py = e.clientY || (e.touches && e.touches[0].clientY);
+                            return Math.atan2(py - cy, px - cx) * 180 / Math.PI;
+                        }
+                        function applyRotation(deg) {
+                            currentRot = deg;
+                            svgBox.style.transform = 'rotate(' + deg + 'deg)';
+                            var mapEl = document.getElementById('map');
+                            mapEl.style.transition = 'transform 0.1s ease';
+                            mapEl.style.transform = 'rotate(' + deg + 'deg)';
+                        }
+                        function onDown(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            dragging = true;
+                            startAngle = getAngle(e) - currentRot;
+                            ring.style.cursor = 'grabbing';
+                        }
+                        function onMove(e) {
+                            if (!dragging) return;
+                            e.preventDefault();
+                            var deg = getAngle(e) - startAngle;
+                            deg = ((deg % 360) + 360) % 360;
+                            if (deg > 180) deg -= 360;
+                            applyRotation(Math.round(deg));
+                        }
+                        function onUp() {
+                            dragging = false;
+                            ring.style.cursor = 'grab';
+                        }
+                        ring.addEventListener('mousedown', onDown);
+                        ring.addEventListener('touchstart', onDown, {passive: false});
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('touchmove', onMove, {passive: false});
+                        document.addEventListener('mouseup', onUp);
+                        document.addEventListener('touchend', onUp);
+                        return wrap;
                     }
                 });
-                compassControl = new CompassRose();
+                compassControl = new CompassWidget();
                 compassControl.addTo(map);
                 _setToolActive('tb-compass', true);
             }
