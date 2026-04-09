@@ -586,6 +586,7 @@
                 .then(r => r.json())
                 .then(groups => {
                     rasterGroups = groups;
+                    autoShowRasters();
                     renderRasterMenu();
                 });
         }
@@ -816,7 +817,6 @@
         function loadRasterList() {
             if (!projetoAtual) return;
             loadRasterGroups();
-            autoShowRasters();
         }
 
         function autoShowRasters() {
@@ -2279,7 +2279,12 @@
             document.getElementById('projeto-nome').style.display = '';
             document.getElementById('projeto-nome').textContent = (p ? p.name : id);
             document.getElementById('page-subtitle').textContent = p ? p.name : id;
-            if (!map) initMap(); else setTimeout(function() { map.invalidateSize(); }, 100);
+            if (!map) {
+                initMap();
+            } else {
+                map.invalidateSize();
+            }
+            map.setView([-15, -47], 4);
             checkCustomRaster();
             loadVectorGroups();
             // Restore mapState from project metadata
