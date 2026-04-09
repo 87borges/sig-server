@@ -3,6 +3,7 @@ SIG Server — Plataforma GIS Online
 """
 import os
 import shutil
+import json
 import requests as req
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from werkzeug.utils import secure_filename
@@ -27,11 +28,87 @@ def allowed_file(filename):
 def index():
     return render_template('index.html')
 
+PROJECTS_META = os.path.join(os.path.dirname(__file__), 'projects_meta.json')
+
+def _load_projects_meta():
+    if os.path.isfile(PROJECTS_META):
+        with open(PROJECTS_META, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def _save_projects_meta(meta):
+    with open(PROJECTS_META, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
 @app.route('/api/projects', methods=['GET'])
 def list_projects():
+    meta = _load_projects_meta()
     uploads = app.config['UPLOAD_FOLDER']
-    projects = [d for d in os.listdir(uploads) if os.path.isdir(os.path.join(uploads, d))]
+    existing = set(d for d in os.listdir(uploads) if os.path.isdir(os.path.join(uploads, d)))
+    changed = False
+    for d in existing:
+        if d not in meta:
+            meta[d] = {'name': d, 'date': '', 'responsible': '', 'contact': '', 'created_at': ''}
+            changed = True
+    if changed:
+        _save_projects_meta(meta)
+    projects = []
+    for pid, info in meta.items():
+        projects.append({'id': pid, 'name': info.get('name', pid), 'date': info.get('date', ''), 'responsible': info.get('responsible', ''), 'contact': info.get('contact', ''), 'created_at': info.get('created_at', '')})
     return jsonify({'projects': projects})
+
+@app.route('/api/projects', methods=['POST'])
+def create_project():
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': 'Nome obrigatorio'}), 400
+    import time
+    from datetime import datetime
+    pid = 'p_' + str(int(time.time() * 1000))
+    meta = _load_projects_meta()
+    meta[pid] = {'name': name, 'date': data.get('date', ''), 'responsible': data.get('responsible', ''), 'contact': data.get('contact', ''), 'created_at': datetime.now().isoformat()}
+    _save_projects_meta(meta)
+    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], pid), exist_ok=True)
+    return jsonify({'success': True, 'id': pid, 'project': meta[pid]})
+
+@app.route('/api/projects/<project>', methods=['PUT'])
+def update_project(project):
+    data = request.get_json() or {}
+    meta = _load_projects_meta()
+    if project not in meta:
+        return jsonify({'error': 'Projeto nao encontrado'}), 404
+    for key in ['name', 'date', 'responsible', 'contact']:
+        if key in data:
+            meta[project][key] = data[key]
+    _save_projects_meta(meta)
+    return jsonify({'success': True, 'project': meta[project]})
+
+@app.route('/api/projects/<project>', methods=['DELETE'])
+def delete_project(project):
+    meta = _load_projects_meta()
+    if project in meta:
+        del meta[project]
+    _save_projects_meta(meta)
+    project_dir = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(project))
+    if os.path.isdir(project_dir):
+        shutil.rmtree(project_dir)
+    vec_meta = os.path.join(VECTOR_DIR, project + '_groups.json')
+    if os.path.isfile(vec_meta):
+        with open(vec_meta) as f:
+            groups = json.load(f)
+        for g in groups:
+            for v in g.get('vectors', []):
+                for old in os.listdir(VECTOR_DIR):
+                    if old.startswith(v['id'] + '_'):
+                        try: os.remove(os.path.join(VECTOR_DIR, old))
+                        except: pass
+        os.remove(vec_meta)
+    import glob
+    for f in glob.glob(os.path.join(RASTER_DIR, project + '_*')):
+        try: os.remove(f)
+        except: pass
+    return jsonify({'success': True})
 
 @app.route('/api/projects/<project>/layers', methods=['GET'])
 def list_layers(project):
