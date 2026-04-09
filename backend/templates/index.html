@@ -6,6 +6,7 @@
     <title>SIG Server — Plataforma GIS Online</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/leaflet-rotate@0.2.4/dist/leaflet-rotate.js"></script>
     <script src="https://unpkg.com/@mapbox/togeojson/togeojson.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -79,7 +80,7 @@
         @media (max-width: 768px) {
         .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
     .leaflet-control-scale-line { font-weight: 700 !important; font-size: 12px !important; padding: 2px 6px !important; }
-#map { overflow: hidden !important; background: #1a1a1a !important; }
+#map { background: #1a1a1a !important; }
 </style>
 </head>
 <body>
@@ -358,13 +359,6 @@
             if (compassControl) {
                 map.removeControl(compassControl);
                 compassControl = null;
-                var wrapper = document.getElementById('map-rotation-wrapper');
-                if (wrapper) {
-                    wrapper.style.transform = '';
-                    wrapper.style.transition = 'transform 0.3s ease';
-                }
-                _restoreDrag();
-                setTimeout(function() { map.invalidateSize(); }, 350);
                 _setToolActive('tb-compass', false);
             } else {
                 var CompassWidget = L.Control.extend({
@@ -383,11 +377,11 @@
                         resetBtn.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2';
                         resetBtn.onclick = function(e) {
                             e.stopPropagation();
-                            applyRotation(0);
+                            map.setBearing(0);
+                            svgBox.style.transform = 'rotate(0deg)';
                         };
                         var dragging = false;
                         var startAngle = 0;
-                        var currentRot = 0;
                         function getAngle(e) {
                             var rect = wrap.getBoundingClientRect();
                             var cx = rect.left + rect.width / 2;
@@ -396,36 +390,11 @@
                             var py = e.clientY || (e.touches && e.touches[0].clientY);
                             return Math.atan2(py - cy, px - cx) * 180 / Math.PI;
                         }
-                        function applyRotation(deg) {
-                            currentRot = deg;
-                            var mapEl = document.getElementById('map');
-                            var rotWrapper = document.getElementById('map-rotation-wrapper');
-                            if (!rotWrapper) {
-                                var pane = mapEl.querySelector('.leaflet-map-pane');
-                                rotWrapper = document.createElement('div');
-                                rotWrapper.id = 'map-rotation-wrapper';
-                                rotWrapper.style.cssText = 'position:absolute;inset:0;transform-origin:center center;overflow:visible';
-                                pane.parentNode.insertBefore(rotWrapper, pane);
-                                rotWrapper.appendChild(pane);
-                            }
-                            if (deg === 0) {
-                                rotWrapper.style.transition = 'transform 0.3s ease';
-                                rotWrapper.style.transform = '';
-                                _restoreDrag();
-                            } else {
-                                rotWrapper.style.transition = dragging ? '' : 'transform 0.3s ease';
-                                rotWrapper.style.transform = 'rotate(' + (-deg) + 'deg)';
-                                _patchDrag(currentRot);
-                            }
-                            svgBox.style.transition = 'transform 0.2s ease';
-                            svgBox.style.transform = 'rotate(' + deg + 'deg)';
-                            setTimeout(function() { map.invalidateSize(); }, 350);
-                        }
                         function onDown(e) {
                             e.preventDefault();
                             e.stopPropagation();
                             dragging = true;
-                            startAngle = getAngle(e) - currentRot;
+                            startAngle = getAngle(e) - map.getBearing();
                             ring.style.cursor = 'grabbing';
                         }
                         function onMove(e) {
@@ -433,9 +402,8 @@
                             e.preventDefault();
                             var deg = getAngle(e) - startAngle;
                             deg = Math.round(deg / 5) * 5;
-                            if (deg > 180) deg -= 360;
-                            if (deg < -180) deg += 360;
-                            applyRotation(deg);
+                            map.setBearing(deg);
+                            svgBox.style.transform = 'rotate(' + deg + 'deg)';
                         }
                         function onUp() {
                             dragging = false;
@@ -457,38 +425,9 @@
         }
 
         var _origOnMove = null;
-        function _patchDrag(deg) {
-            if (_origOnMove) return;
-            var drag = map.dragging;
-            if (!drag || !drag._draggable) return;
-            var draggable = drag._draggable;
-            _origOnMove = draggable._onMove;
-            var rad = -deg * Math.PI / 180;
-            draggable._onMove = function(e) {
-                if (deg === 0 || !draggable._startPoint) {
-                    _origOnMove.call(draggable, e);
-                    return;
-                }
-                var startX = draggable._startPoint.x;
-                var startY = draggable._startPoint.y;
-                var dx = e.clientX - startX;
-                var dy = e.clientY - startY;
-                var rdx = dx * Math.cos(rad) - dy * Math.sin(rad);
-                var rdy = dx * Math.sin(rad) + dy * Math.cos(rad);
-                var fakeE = {};
-                for (var k in e) fakeE[k] = e[k];
-                fakeE.clientX = startX + rdx;
-                fakeE.clientY = startY + rdy;
-                _origOnMove.call(draggable, fakeE);
-            };
-        }
+        
 
-        function _restoreDrag() {
-            var drag = map.dragging;
-            if (!drag || !drag._draggable || !_origOnMove) return;
-            drag._draggable._onMove = _origOnMove;
-            _origOnMove = null;
-        }
+        
 
         function toggleTestTool(n) {
             var el = document.getElementById('tb-test' + n);
@@ -497,7 +436,7 @@
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([-15.78, -47.93], 10);
+            map = L.map('map', { zoomControl: false, rotate: true, rotateControl: false }).setView([-15.78, -47.93], 10);
             
             baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: '© Google', maxZoom: 20
