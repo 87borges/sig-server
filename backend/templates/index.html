@@ -78,7 +78,8 @@
 
         @media (max-width: 768px) {
         .leaflet-control-zoom { top: 10px !important; right: 10px !important; }
-    </style>
+    .leaflet-control-scale-line { font-weight: 700 !important; font-size: 12px !important; padding: 2px 6px !important; }
+</style>
 </head>
 <body>
     <!-- Project Modal (body level - always visible) -->
@@ -174,7 +175,7 @@
                     <!-- Floating toggle button -->
                     <div id="menu-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">⚙️</div>
         <div id="toolbar-btn" onclick="toggleToolbar()" style="position:absolute;top:60px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🛠️</div>
-        <div id="toolbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
+        <div id="toolbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test3-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
             <div style="font-weight:600;font-size:0.8em;margin-bottom:8px;color:#333">Ferramentas</div>
             <div onclick="toggleScale()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Escala</span></div>
             <div onclick="toggleTestTool(2)" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test2-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Ferramenta 2</span></div>
@@ -320,11 +321,12 @@
 
         // ===== MAPA =====
         var scaleControl = null;
+        var compassControl = null;
         var toolbarOpen = false;
 
         function toggleToolbar() {
             toolbarOpen = !toolbarOpen;
-            document.getElementById('toolbar-panel').style.display = toolbarOpen ? 'block' : 'none';
+            document.getElementById('toolbar-panel').style.display = toolbarOpen ? 'flex' : 'none';
         }
 
         function toggleScale() {
@@ -334,8 +336,35 @@
                 scaleControl = null;
                 ind.style.background = '#999';
             } else {
-                scaleControl = L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 200 });
-                scaleControl.addTo(map);
+                scaleControl = L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 200 }).addTo(map);
+                ind.style.background = '#22c55e';
+                setTimeout(function() {
+                    document.querySelectorAll('.leaflet-control-scale-line').forEach(function(el) {
+                        el.style.fontWeight = '700';
+                    });
+                }, 100);
+            }
+        }
+
+        function toggleCompass() {
+            var ind = document.getElementById('tb-compass-ind');
+            if (compassControl) {
+                map.removeControl(compassControl);
+                compassControl = null;
+                ind.style.background = '#999';
+            } else {
+                var CompassRose = L.Control.extend({
+                    options: { position: 'topright' },
+                    onAdd: function(m) {
+                        var div = L.DomUtil.create('div', '');
+                        div.innerHTML = '<div style="width:80px;height:80px"><svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.7)" stroke="#555" stroke-width="1.5"/><polygon points="50,8 54,44 50,38 46,44" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/><polygon points="50,92 54,56 50,62 46,56" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="8,50 44,46 38,50 44,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="92,50 56,46 62,50 56,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><circle cx="50" cy="50" r="4" fill="#555"/><text x="50" y="7" text-anchor="middle" font-size="10" font-weight="bold" fill="#c0392b">N</text><text x="50" y="99" text-anchor="middle" font-size="8" fill="#666">S</text><text x="4" y="53" text-anchor="middle" font-size="8" fill="#666">O</text><text x="96" y="53" text-anchor="middle" font-size="8" fill="#666">L</text></svg></div>';
+                        div.style.background = 'none';
+                        div.style.border = 'none';
+                        return div;
+                    }
+                });
+                compassControl = new CompassRose();
+                compassControl.addTo(map);
                 ind.style.background = '#22c55e';
             }
         }
@@ -348,7 +377,7 @@
 
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([-15.78, -47.93], 10);
-            L.control.zoom({ position: 'topright' }).addTo(map);
+            
             baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: '© Google', maxZoom: 20
             }).addTo(map);
