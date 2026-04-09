@@ -358,6 +358,12 @@
             if (compassControl) {
                 map.removeControl(compassControl);
                 compassControl = null;
+                var wrapper = document.getElementById('map-rotation-wrapper');
+                if (wrapper) {
+                    wrapper.style.transform = '';
+                    wrapper.style.transition = 'transform 0.3s ease';
+                    setTimeout(function() { map.invalidateSize(); }, 350);
+                }
                 _setToolActive('tb-compass', false);
             } else {
                 var CompassWidget = L.Control.extend({
@@ -392,21 +398,36 @@
                         function applyRotation(deg) {
                             currentRot = deg;
                             var mapEl = document.getElementById('map');
-                            var pane = mapEl.querySelector('.leaflet-map-pane');
-                            if (pane) {
-                                var absA = Math.abs(deg % 90);
-                                if (absA > 45) absA = 90 - absA;
-                                var sc = Math.max(1, Math.cos(absA * Math.PI / 180) + Math.sin(absA * Math.PI / 180));
-                                pane.style.transformOrigin = 'center center';
-                                pane.style.transform = 'rotate(' + (-deg) + 'deg) scale(' + sc + ')';
+                            var rotWrapper = document.getElementById('map-rotation-wrapper');
+                            if (!rotWrapper) {
+                                var pane = mapEl.querySelector('.leaflet-map-pane');
+                                rotWrapper = document.createElement('div');
+                                rotWrapper.id = 'map-rotation-wrapper';
+                                rotWrapper.style.cssText = 'position:absolute;inset:0;transform-origin:center center';
+                                pane.parentNode.insertBefore(rotWrapper, pane);
+                                rotWrapper.appendChild(pane);
+                            }
+                            if (deg === 0) {
+                                rotWrapper.style.transition = 'transform 0.3s ease';
+                                rotWrapper.style.transform = '';
+                                setTimeout(function() { map.invalidateSize(); }, 350);
+                            } else {
+                                var w = mapEl.offsetWidth;
+                                var h = mapEl.offsetHeight;
+                                var rad = Math.abs(deg) * Math.PI / 180;
+                                var cosR = Math.abs(Math.cos(rad));
+                                var sinR = Math.abs(Math.sin(rad));
+                                var sc = Math.max(
+                                    (w * cosR + h * sinR) / w,
+                                    (w * sinR + h * cosR) / h
+                                );
+                                sc = Math.ceil(sc * 100) / 100;
+                                rotWrapper.style.transition = dragging ? '' : 'transform 0.3s ease';
+                                rotWrapper.style.transform = 'rotate(' + (-deg) + 'deg) scale(' + sc + ')';
+                                setTimeout(function() { map.invalidateSize(); }, 350);
                             }
                             svgBox.style.transition = 'transform 0.2s ease';
                             svgBox.style.transform = 'rotate(' + deg + 'deg)';
-                            if (deg !== 0) {
-                                setTimeout(function() {
-                                    map.panBy([0, 0], {animate: false});
-                                }, 250);
-                            }
                         }
                         function onDown(e) {
                             e.preventDefault();
