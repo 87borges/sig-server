@@ -450,10 +450,10 @@
                 miniMap = L.map('locmap', {
                     zoomControl: false,
                     attributionControl: false,
-                    dragging: false,
-                    scrollWheelZoom: false,
-                    doubleClickZoom: false,
-                    touchZoom: false,
+                    dragging: true,
+                    scrollWheelZoom: true,
+                    doubleClickZoom: true,
+                    touchZoom: true,
                     keyboard: false,
                     boxZoom: false
                 }).setView(map.getCenter(), map.getZoom() - 4);
@@ -472,7 +472,7 @@
                     }).addTo(miniMap);
                 }
                 miniMapSync = function() {
-                    miniMap.setView(map.getCenter(), map.getZoom() - 4);
+                    miniMap.setView(map.getCenter());
                     drawRect();
                 };
                 miniMapSync();
