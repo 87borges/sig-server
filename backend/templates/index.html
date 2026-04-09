@@ -2023,17 +2023,19 @@
         }
 
         function refreshVectorZOrder() {
-            // QGIS: top of list = top of map
-            // Canvas renderer: bringToFront moves layer to end of draw list
-            // Process bottom-to-top so first item in list gets final bringToFront = top of map
-            for (let gi = vectorGroups.length - 1; gi >= 0; gi--) {
-                const g = vectorGroups[gi];
-                for (let vi = g.vectors.length - 1; vi >= 0; vi--) {
-                    const v = g.vectors[vi];
+            var zIndex = 100;
+            for (var gi = vectorGroups.length - 1; gi >= 0; gi--) {
+                var g = vectorGroups[gi];
+                if (vectorGroupVisibility[g.id] === false) continue;
+                for (var vi = g.vectors.length - 1; vi >= 0; vi--) {
+                    var v = g.vectors[vi];
+                    if (vectorVisibility[v.id] === false) continue;
                     if (vectorLayers[v.id] && map.hasLayer(vectorLayers[v.id])) {
-                        vectorLayers[v.id].eachLayer(l => {
+                        vectorLayers[v.id].eachLayer(function(l) {
                             if (l.bringToFront) l.bringToFront();
+                            if (l.setZIndexOffset) l.setZIndexOffset(zIndex);
                         });
+                        zIndex += 10;
                     }
                 }
             }
