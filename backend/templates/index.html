@@ -173,6 +173,13 @@
                     </div>
                     <!-- Floating toggle button -->
                     <div id="menu-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">⚙️</div>
+        <div id="toolbar-btn" onclick="toggleToolbar()" style="position:absolute;top:60px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:10px 14px;cursor:pointer;font-size:1.2em">🛠️</div>
+        <div id="toolbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
+            <div style="font-weight:600;font-size:0.8em;margin-bottom:8px;color:#333">Ferramentas</div>
+            <div onclick="toggleScale()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Escala</span></div>
+            <div onclick="toggleTestTool(2)" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test2-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Ferramenta 2</span></div>
+            <div onclick="toggleTestTool(3)" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test3-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Ferramenta 3</span></div>
+        </div>
                     <!-- Hidden old menus (kept for compatibility) -->
                     <div id="basemap-menu" style="display:none"></div>
                     <div id="vector-menu" style="display:none"></div>
@@ -312,6 +319,33 @@
         let map, baseLayer = null, overlays = {}, baseLayerType = 'google_sat';
 
         // ===== MAPA =====
+        var scaleControl = null;
+        var toolbarOpen = false;
+
+        function toggleToolbar() {
+            toolbarOpen = !toolbarOpen;
+            document.getElementById('toolbar-panel').style.display = toolbarOpen ? 'block' : 'none';
+        }
+
+        function toggleScale() {
+            var ind = document.getElementById('tb-scale-ind');
+            if (scaleControl) {
+                map.removeControl(scaleControl);
+                scaleControl = null;
+                ind.style.background = '#999';
+            } else {
+                scaleControl = L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 200 });
+                scaleControl.addTo(map);
+                ind.style.background = '#22c55e';
+            }
+        }
+
+        function toggleTestTool(n) {
+            var ind = document.getElementById('tb-test' + n + '-ind');
+            var active = ind.style.background === 'rgb(34, 197, 94)';
+            ind.style.background = active ? '#999' : '#22c55e';
+        }
+
         function initMap() {
             map = L.map('map', { zoomControl: false }).setView([-15.78, -47.93], 10);
             L.control.zoom({ position: 'topright' }).addTo(map);
