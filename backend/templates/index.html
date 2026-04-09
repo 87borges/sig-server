@@ -83,7 +83,7 @@
 #map { background: #1a1a1a !important; }
 #locmap .leaflet-control-zoom, #locmap .leaflet-control-layers, #locmap .leaflet-control-attribution { display: none !important; }
 .leaflet-control-scale-line { margin-bottom: 0 !important; }
-.leaflet-bottom.leaflet-right { left: 50% !important; right: auto !important; transform: translateX(-50%) !important; }
+.leaflet-bottom.leaflet-left { left: 50% !important; transform: translateX(-50%) !important; right: auto !important; }
 </style>
 </head>
 <body>
@@ -356,7 +356,7 @@
                 scaleControl = null;
                 _setToolActive('tb-scale', false);
             } else {
-                scaleControl = L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 200 }).addTo(map);
+                scaleControl = L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 200 }).addTo(map);
                 _setToolActive('tb-scale', true);
             }
         }
