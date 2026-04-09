@@ -54,7 +54,7 @@ def list_projects():
         _save_projects_meta(meta)
     projects = []
     for pid, info in meta.items():
-        projects.append({'id': pid, 'name': info.get('name', pid), 'date': info.get('date', ''), 'responsible': info.get('responsible', ''), 'contact': info.get('contact', ''), 'created_at': info.get('created_at', '')})
+        projects.append({'id': pid, 'name': info.get('name', pid), 'date': info.get('date', ''), 'responsible': info.get('responsible', ''), 'contact': info.get('contact', ''), 'created_at': info.get('created_at', ''), 'mapState': info.get('mapState', None)})
     return jsonify({'projects': projects})
 
 @app.route('/api/projects', methods=['POST'])
