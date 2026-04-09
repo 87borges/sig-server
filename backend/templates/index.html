@@ -2103,6 +2103,24 @@
 
         // ===== PROJETOS =====
         function clearAllMapLayers() {
+            if (projetoAtual) {
+                var state = {
+                    baseLayerType: baseLayerType,
+                    rasterGroupVisibility: JSON.parse(JSON.stringify(rasterGroupVisibility || {})),
+                    rasterVisibility: JSON.parse(JSON.stringify(rasterVisibility || {})),
+                    vectorGroupVisibility: JSON.parse(JSON.stringify(vectorGroupVisibility || {})),
+                    vectorVisibility: JSON.parse(JSON.stringify(vectorVisibility || {})),
+                    vectorGroupCollapsed: JSON.parse(JSON.stringify(vectorGroupCollapsed || {})),
+                    vectorCategoryVisibility: JSON.parse(JSON.stringify(vectorCategoryVisibility || {})),
+                    vectorCategoryCollapsed: JSON.parse(JSON.stringify(vectorCategoryCollapsed || {})),
+                    rasterGroupCollapsed: JSON.parse(JSON.stringify(rasterGroupCollapsed || {}))
+                };
+                fetch('/api/projects/' + projetoAtual, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mapState: state})
+                }).catch(function() {});
+            }
             Object.keys(vectorLayers).forEach(function(vid) {
                 if (map && map.hasLayer(vectorLayers[vid])) map.removeLayer(vectorLayers[vid]);
             });
@@ -2110,6 +2128,9 @@
             vectorVisibility = {};
             vectorGroupVisibility = {};
             vectorGroups = [];
+            vectorGroupCollapsed = {};
+            vectorCategoryVisibility = {};
+            vectorCategoryCollapsed = {};
             Object.keys(customRasters).forEach(function(rid) {
                 if (map && map.hasLayer(customRasters[rid])) map.removeLayer(customRasters[rid]);
             });
@@ -2117,6 +2138,7 @@
             rasterVisibility = {};
             rasterGroupVisibility = {};
             rasterGroups = [];
+            rasterGroupCollapsed = {};
         }
 
         function loadProjects() {
@@ -2260,6 +2282,43 @@
             if (!map) initMap(); else setTimeout(function() { map.invalidateSize(); }, 100);
             checkCustomRaster();
             loadVectorGroups();
+            // Restore mapState from project metadata
+            if (p && p.mapState) {
+                var ms = p.mapState;
+                if (ms.baseLayerType) {
+                    baseLayerType = ms.baseLayerType;
+                    var bases = {
+                        'osm': ['https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', 19],
+                        'esri_sat': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 19],
+                        'esri_topo': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', 19],
+                        'google_sat': ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', 20],
+                        'google_hyb': ['https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', 20],
+                        'google_ter': ['https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', 20]
+                    };
+                    if (baseLayer) map.removeLayer(baseLayer);
+                    if (bases[baseLayerType]) {
+                        var bUrl = bases[baseLayerType][0];
+                        var bMax = bases[baseLayerType][1];
+                        baseLayer = L.tileLayer(bUrl, {maxZoom: bMax}).addTo(map);
+                    }
+                    document.querySelectorAll('.bm-btn').forEach(function(b) {
+                        b.classList.remove('bm-active');
+                    });
+                }
+                if (ms.rasterGroupVisibility) rasterGroupVisibility = ms.rasterGroupVisibility;
+                if (ms.rasterVisibility) rasterVisibility = ms.rasterVisibility;
+                if (ms.vectorGroupVisibility) vectorGroupVisibility = ms.vectorGroupVisibility;
+                if (ms.vectorVisibility) vectorVisibility = ms.vectorVisibility;
+                if (ms.vectorGroupCollapsed) vectorGroupCollapsed = ms.vectorGroupCollapsed;
+                if (ms.vectorCategoryVisibility) vectorCategoryVisibility = ms.vectorCategoryVisibility;
+                if (ms.vectorCategoryCollapsed) vectorCategoryCollapsed = ms.vectorCategoryCollapsed;
+                if (ms.rasterGroupCollapsed) rasterGroupCollapsed = ms.rasterGroupCollapsed;
+            } else {
+                // Default basemap
+                baseLayerType = 'google_sat';
+                if (baseLayer) map.removeLayer(baseLayer);
+                baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {maxZoom: 20}).addTo(map);
+            }
             setTimeout(function() { autoShowExistingVectors(); }, 1500);
         }
 
