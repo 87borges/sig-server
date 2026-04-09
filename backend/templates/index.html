@@ -396,7 +396,7 @@
                         resetBtn.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2';
                         resetBtn.onclick = function(e) {
                             e.stopPropagation();
-                            map.setBearing(0);
+                            if (map.setBearing) map.setBearing(0);
                             svgBox.style.transform = 'rotate(0deg)';
                         };
                         var dragging = false;
@@ -413,7 +413,7 @@
                             e.preventDefault();
                             e.stopPropagation();
                             dragging = true;
-                            startAngle = getAngle(e) - map.getBearing();
+                            startAngle = getAngle(e) - (map.getBearing ? map.getBearing() : 0);
                             ring.style.cursor = 'grabbing';
                         }
                         function onMove(e) {
@@ -421,7 +421,7 @@
                             e.preventDefault();
                             var deg = getAngle(e) - startAngle;
                             deg = Math.round(deg / 5) * 5;
-                            map.setBearing(deg);
+                            if (map.setBearing) map.setBearing(deg);
                             svgBox.style.transform = 'rotate(' + deg + 'deg)';
                         }
                         function onUp() {
@@ -443,10 +443,6 @@
             }
         }
 
-        var _origOnMove = null;
-        
-
-        
 
         var miniMap = null;
         var miniMapSync = null;
@@ -572,7 +568,7 @@
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: false, rotate: true, rotateControl: false }).setView([-15.78, -47.93], 10);
+            map = L.map('map', { zoomControl: false, rotate: L.Map && L.Map.prototype.setBearing ? true : false, rotateControl: false }).setView([-15.78, -47.93], 10);
             
             baseLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
                 attribution: '© Google', maxZoom: 20
