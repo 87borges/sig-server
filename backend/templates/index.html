@@ -83,7 +83,6 @@
 #map { background: #1a1a1a !important; }
 #locmap .leaflet-control-zoom, #locmap .leaflet-control-layers, #locmap .leaflet-control-attribution { display: none !important; }
 .leaflet-control-scale-line { margin-bottom: 0 !important; }
-.leaflet-bottom.leaflet-left { left: 50% !important; transform: translateX(-50%) !important; right: auto !important; }
 </style>
 </head>
 <body>
@@ -358,6 +357,15 @@
             } else {
                 scaleControl = L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 200 }).addTo(map);
                 _setToolActive('tb-scale', true);
+                setTimeout(function() {
+                    var el = document.querySelector('.leaflet-control-scale');
+                    if (el && el.parentElement) {
+                        el.parentElement.style.cssText = 'position:absolute !important;bottom:0 !important;left:50% !important;transform:translateX(-50%) !important;right:auto !important';
+                    }
+                    document.querySelectorAll('.leaflet-control-scale-line').forEach(function(e) {
+                        e.style.fontWeight = '700';
+                    });
+                }, 50);
             }
         }
 
