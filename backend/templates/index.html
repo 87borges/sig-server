@@ -175,20 +175,7 @@
                     <!-- Floating toggle button -->
                     <div id="menu-btn" onclick="openSidePanel('basemap')" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em">⚙️</div>
         <div id="toolbar-btn" onclick="toggleToolbar()" style="position:absolute;top:56px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em">🛠️</div>
-        <div id="to
-        <div id="compass-rotate-btn" style="display:none;position:absolute;top:100px;left:54px;z-index:998;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:4px;display:flex;flex-direction:column;gap:2px">
-            <div onclick="rotateMap(-90)" title="Girar -90" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">↶</div>
-            <div onclick="rotateMap(0)" title="Reset Norte" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">N</div>
-            <div onclick="rotateMap(90)" title="Girar +90" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">↷</div>
-        </div>olbar-panel" style="display:none;position:absolute;top:100px;left:10px;width:40px;z-index:998;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:4px;display:flex;flex-direction:column;gap:2px">
-            <div id="tb-scale" onclick="toggleScale()" title="Escala" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">📏</div>
-            <div id="tb-compass" onclick="toggleCompass()" title="Rosa dos Ventos" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">🧭</div>
-            <div id="tb-test3" onclick="toggleTestTool(3)" title="Ferramenta 3" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='transparent'">🔧</div>
-            </div>olbar-panel" style="display:none;position:absolute;top:105px;left:10px;width:280px;z-index:998;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:8px">
-            <div onclick="toggleScale()" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-radius:8px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span style="font-size:1.1em">📏</span><span>Escala</span></div>
-            <div onclick="toggleCompass()" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-radius:8px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span style="font-size:1.1em">🧭</span><span>Rosa dos Ventos</span></div>
-            <div onclick="toggleTestTool(3)" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-radius:8px;font-size:0.85em;color:white;transition:background 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.1)'" onmouseleave="this.style.background='transparent'"><span id="tb-test3-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span style="font-size:1.1em">🔧</span><span>Ferramenta 3</span></div>
-            </div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test3-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
+        <div id="toolbar-panel" style="display:none;position:absolute;top:100px;left:10px;width:40px;z-index:998;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:4px;display:flex;flex-direction:column;gap:2px"><div id="tb-scale" onclick="toggleScale()" title="Escala" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background=this.dataset.active?'rgba(34,197,94,0.25)':'transparent'">📏</div><div id="tb-compass" onclick="toggleCompass()" title="Rosa dos Ventos" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background=this.dataset.active?'rgba(34,197,94,0.25)':'transparent'">🧭</div><div id="tb-test3" onclick="toggleTestTool(3)" title="Ferramenta 3" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background=this.dataset.active?'rgba(34,197,94,0.25)':'transparent'">🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test3-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
             <div style="font-weight:600;font-size:0.8em;margin-bottom:8px;color:#333">Ferramentas</div>
             <div onclick="toggleScale()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Escala</span></div>
             <div onclick="toggleTestTool(2)" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-test2-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Ferramenta 2</span></div>
@@ -336,28 +323,28 @@
         var scaleControl = null;
         var compassControl = null;
         var toolbarOpen = false;
-        var currentBearing = 0;
+
+        function _setToolActive(id, active) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.dataset.active = active ? '1' : '';
+            el.style.background = active ? 'rgba(34,197,94,0.25)' : 'transparent';
+            el.style.boxShadow = active ? 'inset 0 0 0 1.5px rgba(34,197,94,0.5)' : 'none';
+        }
 
         function toggleToolbar() {
             toolbarOpen = !toolbarOpen;
             document.getElementById('toolbar-panel').style.display = toolbarOpen ? 'flex' : 'none';
         }
 
-        function _tbHighlight(id, active) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            el.style.background = active ? 'rgba(34,197,94,0.3)' : 'transparent';
-            el.style.boxShadow = active ? 'inset 0 0 0 1.5px rgba(34,197,94,0.6)' : 'none';
-        }
-
         function toggleScale() {
             if (scaleControl) {
                 map.removeControl(scaleControl);
                 scaleControl = null;
-                _tbHighlight('tb-scale', false);
+                _setToolActive('tb-scale', false);
             } else {
                 scaleControl = L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 200 }).addTo(map);
-                _tbHighlight('tb-scale', true);
+                _setToolActive('tb-scale', true);
             }
         }
 
@@ -365,14 +352,12 @@
             if (compassControl) {
                 map.removeControl(compassControl);
                 compassControl = null;
-                _tbHighlight('tb-compass', false);
-                var rb = document.getElementById('compass-rotate-btn');
-                if (rb) rb.style.display = 'none';
+                _setToolActive('tb-compass', false);
             } else {
                 var CompassRose = L.Control.extend({
                     options: { position: 'topright' },
                     onAdd: function(m) {
-                        var div = L.DomUtil.create('div', 'compass-rose-widget');
+                        var div = L.DomUtil.create('div', '');
                         div.innerHTML = '<div style="width:80px;height:80px"><svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.7)" stroke="#555" stroke-width="1.5"/><polygon points="50,8 54,44 50,38 46,44" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/><polygon points="50,92 54,56 50,62 46,56" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="8,50 44,46 38,50 44,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="92,50 56,46 62,50 56,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><circle cx="50" cy="50" r="4" fill="#555"/><text x="50" y="7" text-anchor="middle" font-size="10" font-weight="bold" fill="#c0392b">N</text><text x="50" y="99" text-anchor="middle" font-size="8" fill="#666">S</text><text x="4" y="53" text-anchor="middle" font-size="8" fill="#666">O</text><text x="96" y="53" text-anchor="middle" font-size="8" fill="#666">L</text></svg></div>';
                         div.style.background = 'none';
                         div.style.border = 'none';
@@ -381,29 +366,14 @@
                 });
                 compassControl = new CompassRose();
                 compassControl.addTo(map);
-                _tbHighlight('tb-compass', true);
-                var rb = document.getElementById('compass-rotate-btn');
-                if (rb) rb.style.display = 'flex';
+                _setToolActive('tb-compass', true);
             }
-        }
-
-        function rotateMap(deg) {
-            currentBearing = (currentBearing + deg) % 360;
-            if (currentBearing < 0) currentBearing += 360;
-            var mapEl = document.getElementById('map');
-            mapEl.style.transition = 'transform 0.3s ease';
-            mapEl.style.transform = 'rotate(' + currentBearing + 'deg)';
-            var roses = document.querySelectorAll('.compass-rose-widget svg');
-            roses.forEach(function(r) {
-                r.style.transition = 'transform 0.3s ease';
-                r.style.transform = 'rotate(' + (-currentBearing) + 'deg)';
-            });
         }
 
         function toggleTestTool(n) {
             var el = document.getElementById('tb-test' + n);
-            var active = el.style.boxShadow.indexOf('rgba') >= 0;
-            _tbHighlight('tb-test' + n, !active);
+            var active = el.dataset.active === '1';
+            _setToolActive('tb-test' + n, !active);
         }
 
         function initMap() {
