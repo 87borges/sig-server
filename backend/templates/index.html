@@ -365,11 +365,18 @@
                         var wrap = L.DomUtil.create('div', 'compass-widget');
                         wrap.style.cssText = 'position:relative;width:90px;height:90px;user-select:none';
                         var ring = L.DomUtil.create('div', '', wrap);
-                        ring.style.cssText = 'position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,0.6);box-shadow:0 2px 10px rgba(0,0,0,0.2);cursor:grab;border:2px solid rgba(0,0,0,0.15)';
+                        ring.style.cssText = 'position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,0.75);box-shadow:0 2px 10px rgba(0,0,0,0.2);cursor:grab;border:2px solid rgba(0,0,0,0.12)';
                         var svgBox = L.DomUtil.create('div', '', wrap);
                         svgBox.id = 'compass-svg-box';
                         svgBox.style.cssText = 'position:absolute;top:5px;left:5px;width:80px;height:80px;pointer-events:none';
                         svgBox.innerHTML = '<svg viewBox="0 0 100 100" width="80" height="80"><polygon points="50,10 54,44 50,38 46,44" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/><polygon points="50,90 54,56 50,62 46,56" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="10,50 44,46 38,50 44,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><polygon points="90,50 56,46 62,50 56,54" fill="#ccc" stroke="#999" stroke-width="0.5"/><circle cx="50" cy="50" r="3" fill="#555"/><text x="50" y="8" text-anchor="middle" font-size="9" font-weight="bold" fill="#c0392b">N</text><text x="50" y="98" text-anchor="middle" font-size="7" fill="#888">S</text><text x="3" y="53" text-anchor="middle" font-size="7" fill="#888">O</text><text x="97" y="53" text-anchor="middle" font-size="7" fill="#888">L</text></svg>';
+                        var resetBtn = L.DomUtil.create('div', '', wrap);
+                        resetBtn.innerHTML = '<div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.9);border:1.5px solid #999;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#555;cursor:pointer;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2">N</div>';
+                        resetBtn.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2';
+                        resetBtn.onclick = function(e) {
+                            e.stopPropagation();
+                            applyRotation(0);
+                        };
                         var dragging = false;
                         var startAngle = 0;
                         var currentRot = 0;
@@ -383,10 +390,15 @@
                         }
                         function applyRotation(deg) {
                             currentRot = deg;
+                            var pane = document.querySelector('.leaflet-map-pane');
+                            if (pane) {
+                                pane.style.transition = 'transform 0.3s ease';
+                                var t = pane.style.transform || '';
+                                var base = t.replace(/rotate\([^)]*\)/g, '').trim();
+                                pane.style.transform = base + ' rotate(' + (-deg) + 'deg)';
+                            }
+                            svgBox.style.transition = 'transform 0.3s ease';
                             svgBox.style.transform = 'rotate(' + deg + 'deg)';
-                            var mapEl = document.getElementById('map');
-                            mapEl.style.transition = 'transform 0.1s ease';
-                            mapEl.style.transform = 'rotate(' + deg + 'deg)';
                         }
                         function onDown(e) {
                             e.preventDefault();
@@ -399,9 +411,10 @@
                             if (!dragging) return;
                             e.preventDefault();
                             var deg = getAngle(e) - startAngle;
-                            deg = ((deg % 360) + 360) % 360;
+                            deg = Math.round(deg / 5) * 5;
                             if (deg > 180) deg -= 360;
-                            applyRotation(Math.round(deg));
+                            if (deg < -180) deg += 360;
+                            applyRotation(deg);
                         }
                         function onUp() {
                             dragging = false;
