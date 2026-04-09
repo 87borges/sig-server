@@ -105,6 +105,7 @@
                 <button class="btn btn-novo" id="btn-novo" onclick="novoProjeto()">➕ Novo Projeto</button>
                 <button class="btn btn-voltar" id="btn-voltar" onclick="verProjetos()">← Voltar</button>
                 <span id="projeto-nome" style="font-weight:600;margin-left:10px;display:none"></span>
+                <button class="btn btn-excluir" id="btn-gerenciar" onclick="editarProjetoAtual()" style="display:none;background:#555;color:white">⚙️ Gerenciar</button>
                 <button class="btn btn-excluir" id="btn-excluir" onclick="excluirProjeto()">🗑️</button>
             </div>
         </div>
@@ -162,6 +163,18 @@
                     <!-- Hidden old menus (kept for compatibility) -->
                     <div id="basemap-menu" style="display:none"></div>
                     <div id="vector-menu" style="display:none"></div>
+                    
+                    <!-- Project Modal -->
+                    <div id="project-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:380px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="font-weight:700;font-size:1em;margin-bottom:16px" id="pm-title">Novo Projeto</div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Nome do Projeto *</label><input type="text" id="pm-name" placeholder="Nome do projeto" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter')confirmProjectModal()"></div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Data</label><input type="date" id="pm-date" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Responsável</label><input type="text" id="pm-responsible" placeholder="Nome do responsável" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="margin-bottom:16px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Contato</label><input type="text" id="pm-contact" placeholder="E-mail ou telefone" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="display:flex;gap:8px"><button onclick="cancelProjectModal()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button><button onclick="confirmProjectModal()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600" id="pm-confirm-btn">Criar</button></div>
+                        </div>
+                    </div>
                     <!-- Group Name Modal -->
                     <div id="group-name-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
                         <div style="background:white;border-radius:16px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
@@ -292,7 +305,7 @@
                 </div>
 
     <script>
-        let projetos = JSON.parse(localStorage.getItem('sig_projects') || '{}');
+        let projetos = [];
         let projetoAtual = null;
         let map, baseLayer = null, overlays = {}, baseLayerType = 'google_sat';
 
@@ -842,8 +855,8 @@
         let rasterGroups = [];
 
         function loadVectorGroups() {
-            if (!projetoAtual) return;
-            fetch(`/api/vector/${projetoAtual}/groups`)
+            if (!projetoAtual) return Promise.resolve();
+            return fetch(`/api/vector/${projetoAtual}/groups`)
                 .then(r => r.json())
                 .then(groups => {
                     vectorGroups = groups;
@@ -851,7 +864,7 @@
                     const undetected = [];
                     groups.forEach(g => g.vectors.forEach(v => { if (!v._detectedType) undetected.push(v); }));
                     if (undetected.length > 0) {
-                        Promise.all(undetected.map(v => { if (v.geom_type) { v._detectedType = v.geom_type; return Promise.resolve(); } let url = `/api/vector/${projetoAtual}/detect-type/${v.id}`; if (v.gpkg_layer) url += `?layer=${encodeURIComponent(v.gpkg_layer)}`; return fetch(url).then(r=>r.json()).then(d=>{v._detectedType=d.type;}); })).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
+                        return Promise.all(undetected.map(v => { if (v.geom_type) { v._detectedType = v.geom_type; return Promise.resolve(); } let url = `/api/vector/${projetoAtual}/detect-type/${v.id}`; if (v.gpkg_layer) url += `?layer=${encodeURIComponent(v.gpkg_layer)}`; return fetch(url).then(r=>r.json()).then(d=>{v._detectedType=d.type;}); })).then(()=>{ renderVectorMenu(); saveVectorGroups(); });
                     } else {
                         renderVectorMenu();
                     }
@@ -2087,65 +2100,165 @@
         }
 
         // ===== PROJETOS =====
-        function salvarProjetos() { localStorage.setItem('sig_projects', JSON.stringify(projetos)); }
+        function clearAllMapLayers() {
+            Object.keys(vectorLayers).forEach(function(vid) { if (map && map.hasLayer(vectorLayers[vid])) map.removeLayer(vectorLayers[vid]); });
+            vectorLayers = {};
+            vectorVisibility = {};
+            vectorGroupVisibility = {};
+            vectorGroups = [];
+            Object.keys(customRasters).forEach(function(rid) { if (map && map.hasLayer(customRasters[rid])) map.removeLayer(customRasters[rid]); });
+            customRasters = {};
+            rasterVisibility = {};
+            rasterGroupVisibility = {};
+            rasterGroups = [];
+        }
+
+        function loadProjects() {
+            fetch('/api/projects').then(function(r) { return r.json(); }).then(function(data) { projetos = data.projects || []; renderProjetos(); });
+        }
 
         function renderProjetos() {
-            const keys = Object.keys(projetos);
-            const vazios = document.getElementById('projetos-vazios');
-            const grid = document.getElementById('projetos-grid');
-            if (keys.length === 0) { vazios.style.display = 'block'; grid.style.display = 'none'; return; }
+            var vazios = document.getElementById('projetos-vazios');
+            var grid = document.getElementById('projetos-grid');
+            if (projetos.length === 0) { vazios.style.display = 'block'; grid.style.display = 'none'; return; }
             vazios.style.display = 'none'; grid.style.display = 'grid'; grid.innerHTML = '';
-            keys.forEach(id => {
-                const p = projetos[id];
-                const div = document.createElement('div');
+            projetos.forEach(function(p) {
+                var div = document.createElement('div');
                 div.className = 'projeto-card';
-                div.innerHTML = `<h4>📁 ${p.nome}</h4><p>${new Date(p.data).toLocaleDateString('pt-BR')}</p>`;
-                div.onclick = () => abrirProjeto(id);
+                var dateStr = p.date ? new Date(p.date + 'T00:00:00').toLocaleDateString('pt-BR') : (p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '');
+                var html = '<h4>' + p.name + '</h4>';
+                if (dateStr) html += '<p style="font-size:0.8em;color:#888;margin-top:4px">' + dateStr + '</p>';
+                if (p.responsible) html += '<p style="font-size:0.8em;color:#888">Responsável: ' + p.responsible + '</p>';
+                if (p.contact) html += '<p style="font-size:0.8em;color:#888">Contato: ' + p.contact + '</p>';
+                div.innerHTML = html;
+                div.onclick = function() { abrirProjeto(p.id); };
+                var actions = document.createElement('div');
+                actions.style.cssText = 'display:flex;gap:8px;margin-top:10px';
+                var editBtn = document.createElement('span');
+                editBtn.textContent = '✏️ Editar';
+                editBtn.style.cssText = 'cursor:pointer;font-size:0.8em;opacity:0.5';
+                editBtn.onclick = function(e) { e.stopPropagation(); editarProjeto(p.id); };
+                var delBtn = document.createElement('span');
+                delBtn.textContent = '🗑️ Excluir';
+                delBtn.style.cssText = 'cursor:pointer;font-size:0.8em;opacity:0.5;color:#c0392b';
+                delBtn.onclick = function(e) { e.stopPropagation(); excluirProjeto(p.id); };
+                actions.appendChild(editBtn);
+                actions.appendChild(delBtn);
+                div.appendChild(actions);
                 grid.appendChild(div);
             });
         }
 
+        var _pmMode = 'create', _pmEditId = null;
+
         function novoProjeto() {
-            const nome = prompt('Nome do projeto:');
-            if (!nome) return;
-            const id = 'p_' + Date.now();
-            projetos[id] = { nome, data: new Date().toISOString() };
-            salvarProjetos();
-            abrirProjeto(id);
+            _pmMode = 'create'; _pmEditId = null;
+            document.getElementById('pm-title').textContent = 'Novo Projeto';
+            document.getElementById('pm-confirm-btn').textContent = 'Criar';
+            document.getElementById('pm-name').value = '';
+            document.getElementById('pm-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('pm-responsible').value = '';
+            document.getElementById('pm-contact').value = '';
+            document.getElementById('project-modal').style.display = 'flex';
+            setTimeout(function() { document.getElementById('pm-name').focus(); }, 100);
+        }
+
+        function editarProjeto(id) {
+            var p = projetos.find(function(x) { return x.id === id; });
+            if (!p) return;
+            _pmMode = 'edit'; _pmEditId = id;
+            document.getElementById('pm-title').textContent = 'Editar Projeto';
+            document.getElementById('pm-confirm-btn').textContent = 'Salvar';
+            document.getElementById('pm-name').value = p.name || '';
+            document.getElementById('pm-date').value = p.date || '';
+            document.getElementById('pm-responsible').value = p.responsible || '';
+            document.getElementById('pm-contact').value = p.contact || '';
+            document.getElementById('project-modal').style.display = 'flex';
+            setTimeout(function() { document.getElementById('pm-name').focus(); }, 100);
+        }
+
+        function editarProjetoAtual() {
+            if (projetoAtual) editarProjeto(projetoAtual);
+        }
+
+        function cancelProjectModal() {
+            document.getElementById('project-modal').style.display = 'none';
+        }
+
+        function confirmProjectModal() {
+            var name = document.getElementById('pm-name').value.trim();
+            if (!name) { alert('Informe o nome do projeto'); return; }
+            var data = {
+                name: name,
+                date: document.getElementById('pm-date').value,
+                responsible: document.getElementById('pm-responsible').value.trim(),
+                contact: document.getElementById('pm-contact').value.trim()
+            };
+            document.getElementById('project-modal').style.display = 'none';
+            if (_pmMode === 'create') {
+                fetch('/api/projects', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) })
+                    .then(function(r) { return r.json(); })
+                    .then(function(result) {
+                        if (result.success) { loadProjects(); abrirProjeto(result.id); }
+                        else alert('Erro: ' + (result.error || 'desconhecido'));
+                    });
+            } else {
+                fetch('/api/projects/' + _pmEditId, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data) })
+                    .then(function(r) { return r.json(); })
+                    .then(function(result) {
+                        if (result.success) {
+                            loadProjects();
+                            if (projetoAtual === _pmEditId) {
+                                document.getElementById('projeto-nome').textContent = '📁 ' + data.name;
+                                document.getElementById('page-subtitle').textContent = data.name;
+                            }
+                        }
+                    });
+            }
         }
 
         function abrirProjeto(id) {
+            clearAllMapLayers();
             projetoAtual = id;
+            var p = projetos.find(function(x) { return x.id === id; });
             mostrarView('view-mapa');
             document.getElementById('btn-novo').style.display = 'none';
             document.getElementById('btn-voltar').style.display = '';
             document.getElementById('btn-excluir').style.display = '';
+            document.getElementById('btn-gerenciar').style.display = '';
             document.getElementById('projeto-nome').style.display = '';
-            document.getElementById('projeto-nome').textContent = '📁 ' + projetos[id].nome;
-            document.getElementById('page-subtitle').textContent = projetos[id].nome;
-            if (!map) initMap(); else setTimeout(() => map.invalidateSize(), 100);
+            document.getElementById('projeto-nome').textContent = '📁 ' + (p ? p.name : id);
+            document.getElementById('page-subtitle').textContent = p ? p.name : id;
+            if (!map) initMap(); else setTimeout(function() { map.invalidateSize(); }, 100);
             checkCustomRaster();
             loadVectorGroups();
-            autoShowExistingVectors();
+            setTimeout(function() { autoShowExistingVectors(); }, 1500);
         }
 
         function verProjetos(btn) {
+            clearAllMapLayers();
             projetoAtual = null;
             mostrarView('view-projetos');
             document.getElementById('btn-novo').style.display = '';
             document.getElementById('btn-voltar').style.display = 'none';
             document.getElementById('btn-excluir').style.display = 'none';
+            document.getElementById('btn-gerenciar').style.display = 'none';
             document.getElementById('projeto-nome').style.display = 'none';
             document.getElementById('page-subtitle').textContent = 'Plataforma GIS Online';
-            if (btn) { document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
-            renderProjetos();
+            if (btn) { document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); }); btn.classList.add('active'); }
+            loadProjects();
         }
 
-        function excluirProjeto() {
-            if (!confirm('Excluir este projeto?')) return;
-            delete projetos[projetoAtual];
-            salvarProjetos();
-            verProjetos();
+        function excluirProjeto(id) {
+            var pid = id || projetoAtual;
+            var p = projetos.find(function(x) { return x.id === pid; });
+            if (!confirm('Excluir o projeto "' + (p ? p.name : pid) + '" e todos os seus dados?')) return;
+            fetch('/api/projects/' + pid, { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function() {
+                    if (projetoAtual === pid) verProjetos();
+                    else loadProjects();
+                });
         }
 
         function mostrarView(id) {
@@ -2154,7 +2267,7 @@
         }
 
         // Init
-        renderProjetos();
+        loadProjects();
     </script>
 </body>
 </html>
