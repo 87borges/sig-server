@@ -164,17 +164,6 @@
                     <div id="basemap-menu" style="display:none"></div>
                     <div id="vector-menu" style="display:none"></div>
                     
-                    <!-- Project Modal -->
-                    <div id="project-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
-                        <div style="background:white;border-radius:16px;padding:24px;width:380px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
-                            <div style="font-weight:700;font-size:1em;margin-bottom:16px" id="pm-title">Novo Projeto</div>
-                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Nome do Projeto *</label><input type="text" id="pm-name" placeholder="Nome do projeto" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter')confirmProjectModal()"></div>
-                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Data</label><input type="date" id="pm-date" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
-                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Responsável</label><input type="text" id="pm-responsible" placeholder="Nome do responsável" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
-                            <div style="margin-bottom:16px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Contato</label><input type="text" id="pm-contact" placeholder="E-mail ou telefone" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
-                            <div style="display:flex;gap:8px"><button onclick="cancelProjectModal()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button><button onclick="confirmProjectModal()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600" id="pm-confirm-btn">Criar</button></div>
-                        </div>
-                    </div>
                     <!-- Group Name Modal -->
                     <div id="group-name-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
                         <div style="background:white;border-radius:16px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
@@ -2269,5 +2258,17 @@
         // Init
         loadProjects();
     </script>
+<!-- Project Modal -->
+                    <div id="project-modal" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
+                        <div style="background:white;border-radius:16px;padding:24px;width:380px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);color:#222">
+                            <div style="font-weight:700;font-size:1em;margin-bottom:16px" id="pm-title">Novo Projeto</div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Nome do Projeto *</label><input type="text" id="pm-name" placeholder="Nome do projeto" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box" onkeydown="if(event.key==='Enter')confirmProjectModal()"></div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Data</label><input type="date" id="pm-date" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="margin-bottom:12px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Responsável</label><input type="text" id="pm-responsible" placeholder="Nome do responsável" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="margin-bottom:16px"><label style="font-size:0.8em;font-weight:600;display:block;margin-bottom:4px">Contato</label><input type="text" id="pm-contact" placeholder="E-mail ou telefone" style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:8px;font-size:0.95em;outline:none;box-sizing:border-box"></div>
+                            <div style="display:flex;gap:8px"><button onclick="cancelProjectModal()" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:8px;background:white;cursor:pointer;font-size:0.9em">Cancelar</button><button onclick="confirmProjectModal()" style="flex:1;padding:8px;border:none;border-radius:8px;background:#1a1a1a;color:white;cursor:pointer;font-size:0.9em;font-weight:600" id="pm-confirm-btn">Criar</button></div>
+                        </div>
+                    </div>
+                    
 </body>
 </html>
