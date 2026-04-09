@@ -78,7 +78,7 @@ def update_project(project):
     meta = _load_projects_meta()
     if project not in meta:
         return jsonify({'error': 'Projeto nao encontrado'}), 404
-    for key in ['name', 'date', 'responsible', 'contact']:
+    for key in ['name', 'date', 'responsible', 'contact', 'mapState']:
         if key in data:
             meta[project][key] = data[key]
     _save_projects_meta(meta)
