@@ -489,14 +489,22 @@
             legendUpdateTimer = setTimeout(updateLegend, 100);
         }
 
-        function _legendMakeIcon(vtype, color, dash) {
+        function _legendMakeIcon(vtype, color, dash, strokeColor, weight, opacity, strokeOpacity) {
+            if (!strokeColor) strokeColor = '#333333';
+            if (weight === undefined || weight === null) weight = 2;
+            if (opacity === undefined || opacity === null) opacity = 1;
+            if (strokeOpacity === undefined || strokeOpacity === null) strokeOpacity = 1;
             if (vtype === 'point') {
                 return '<svg width="24" height="24"><circle cx="12" cy="12" r="9" fill="' + color + '" stroke="rgba(0,0,0,0.15)" stroke-width="1"/></svg>';
             } else if (vtype === 'line') {
                 var dashAttr = dash ? ' stroke-dasharray="6,4"' : '';
                 return '<svg width="32" height="14"><line x1="1" y1="7" x2="31" y2="7" stroke="' + color + '" stroke-width="3.5"' + dashAttr + ' stroke-linecap="round"/></svg>';
             } else {
-                return '<span style="display:inline-block;width:22px;height:18px;background:' + color + ';border:1.5px solid rgba(0,0,0,0.15);border-radius:3px"></span>';
+                if (weight > 0) {
+                    return '<svg width="22" height="18"><rect x="'+(weight/2)+'" y="'+(weight/2)+'" width="'+(22-weight)+'" height="'+(18-weight)+'" fill="'+color+'" stroke="'+strokeColor+'" stroke-width="'+weight+'" stroke-opacity="'+strokeOpacity+'" fill-opacity="'+opacity+'" rx="2"/></svg>';
+                } else {
+                    return '<svg width="22" height="18"><rect x="1" y="1" width="20" height="16" fill="'+color+'" fill-opacity="'+opacity+'" stroke="none" rx="2"/></svg>';
+                }
             }
         }
 
@@ -544,7 +552,7 @@
                                 row.className = 'legend-row';
                                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:2px 0 2px 8px;break-inside:avoid';
                                 var catColor = cat.color || cat.strokeColor || color;
-                                row.innerHTML = _legendMakeIcon(vtype, catColor, cat.dash) + '<span style="flex:1;font-size:0.9em">' + (cat.label || cat.value || 'Sem classe') + '</span>';
+                                row.innerHTML = _legendMakeIcon(vtype, catColor, cat.dash, cat.strokeColor || v.strokeColor || '#333333', ('weight' in cat) ? cat.weight : v.weight, cat.opacity !== undefined ? cat.opacity : v.opacity, cat.strokeOpacity !== undefined ? cat.strokeOpacity : v.strokeOpacity) + '<span style="flex:1;font-size:0.9em">' + (cat.label || cat.value || 'Sem classe') + '</span>';
                                 items.appendChild(row);
                             });
                         }
@@ -552,7 +560,7 @@
                         var row = document.createElement('div');
                         row.className = 'legend-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;break-inside:avoid';
-                        row.innerHTML = _legendMakeIcon(vtype, color, false) + '<span style="flex:1;">' + (v.name || v.id) + '</span>';
+                        row.innerHTML = _legendMakeIcon(vtype, color, false, v.strokeColor, v.weight, v.opacity, v.strokeOpacity) + '<span style="flex:1;">' + (v.name || v.id) + '</span>';
                         items.appendChild(row);
                     }
                 }
