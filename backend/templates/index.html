@@ -185,13 +185,11 @@
         </div>
         
         
+        
         <div id="legend-container" style="display:none;position:absolute;bottom:16px;left:10px;z-index:997;background:rgba(0,0,0,0.35);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.25);min-width:140px;min-height:50px;font-size:0.78em;overflow:hidden">
-            <div id="legend-header" style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;cursor:nwse-resize;user-select:none" onmousedown="legendDragStart(event)">
-                <div style="font-weight:600;font-size:0.9em;display:flex;align-items:center;gap:6px;pointer-events:none"><span style="font-size:1em">📖</span> Legenda</div>
-                <div style="display:flex;align-items:center;gap:6px">
-                    <span id="legend-size-reset" onclick="resetLegendSize(event)" title="Resetar tamanho" style="cursor:pointer;opacity:0.4;font-size:0.9em;transition:opacity 0.15s;padding:2px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4">&#x21BB;</span>
-                    <span style="opacity:0.35;font-size:0.7em;pointer-events:none">&#x25E2;</span>
-                </div>
+            <div id="legend-header" style="padding:10px 14px 6px;display:flex;align-items:center;gap:6px;cursor:nwse-resize;user-select:none" onmousedown="legendDragStart(event)">
+                <span style="font-size:1em;pointer-events:none">📖</span>
+                <span style="font-weight:600;font-size:0.9em;pointer-events:none">Legenda</span>
             </div>
             <div id="legend-items" style="padding:2px 14px 10px;overflow-y:auto"></div>
         </div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-locmap-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
@@ -540,7 +538,7 @@
                                 row.className = 'legend-row';
                                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:2px 0 2px 8px;break-inside:avoid';
                                 var catColor = cat.color || cat.strokeColor || color;
-                                row.innerHTML = _legendMakeIcon(vtype, catColor, cat.dash) + '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.9em">' + (cat.label || cat.value || 'Sem classe') + '</span>';
+                                row.innerHTML = _legendMakeIcon(vtype, catColor, cat.dash) + '<span style="flex:1;font-size:0.9em">' + (cat.label || cat.value || 'Sem classe') + '</span>';
                                 items.appendChild(row);
                             });
                         }
@@ -548,7 +546,7 @@
                         var row = document.createElement('div');
                         row.className = 'legend-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;break-inside:avoid';
-                        row.innerHTML = _legendMakeIcon(vtype, color, false) + '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (v.name || v.id) + '</span>';
+                        row.innerHTML = _legendMakeIcon(vtype, color, false) + '<span style="flex:1;">' + (v.name || v.id) + '</span>';
                         items.appendChild(row);
                     }
                 }
@@ -569,7 +567,7 @@
                         var row = document.createElement('div');
                         row.className = 'legend-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;break-inside:avoid';
-                        row.innerHTML = '<span style="display:inline-block;width:14px;height:12px;background:repeating-linear-gradient(45deg,#555,#555 2px,#777 2px,#777 4px);border:1px solid rgba(255,255,255,0.3);border-radius:2px"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (rst.name || rst.id) + '</span>';
+                        row.innerHTML = '<span style="display:inline-block;width:14px;height:12px;background:repeating-linear-gradient(45deg,#555,#555 2px,#777 2px,#777 4px);border:1px solid rgba(255,255,255,0.3);border-radius:2px"></span><span style="flex:1;">' + (rst.name || rst.id) + '</span>';
                         items.appendChild(row);
                     }
                 }
@@ -607,20 +605,12 @@
             items.style.columnFill = 'balance';
         }
 
-        function resetLegendSize(e) {
-            if (e) e.stopPropagation();
-            var container = document.getElementById('legend-container');
-            if (!container) return;
-            container.style.width = '';
-            container.style.height = '';
-            updateLegend();
-        }
+        
 
         var _legendDrag = { active: false, startX: 0, startY: 0, startW: 0, startH: 0 };
 
         function legendDragStart(e) {
-            if (e.target.id === 'legend-size-reset') return;
-            e.preventDefault();
+                        e.preventDefault();
             var container = document.getElementById('legend-container');
             if (!container) return;
             _legendDrag.active = true;
