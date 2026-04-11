@@ -184,15 +184,16 @@
             <div id="locmap" style="width:100%;height:100%"></div>
         </div>
         
-        <div id="legend-container" style="display:none;position:absolute;bottom:16px;left:10px;z-index:997;background:rgba(0,0,0,0.35);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.25);min-width:180px;max-width:600px;min-height:60px;font-size:0.78em;resize:both;overflow:hidden">
-            <div id="legend-header" style="padding:12px 16px 6px;display:flex;align-items:center;justify-content:space-between;cursor:default">
-                <div style="font-weight:600;font-size:0.9em;display:flex;align-items:center;gap:6px"><span style="font-size:1em">📖</span> Legenda</div>
-                <div style="display:flex;gap:4px">
-                    <span id="legend-size-reset" onclick="resetLegendSize()" title="Resetar tamanho" style="cursor:pointer;opacity:0.5;font-size:0.85em;transition:opacity 0.15s" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.5">&#x21BB;</span>
+        
+        <div id="legend-container" style="display:none;position:absolute;bottom:16px;left:10px;z-index:997;background:rgba(0,0,0,0.35);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.25);min-width:140px;min-height:50px;font-size:0.78em;overflow:hidden">
+            <div id="legend-header" style="padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;cursor:nwse-resize;user-select:none" onmousedown="legendDragStart(event)">
+                <div style="font-weight:600;font-size:0.9em;display:flex;align-items:center;gap:6px;pointer-events:none"><span style="font-size:1em">📖</span> Legenda</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <span id="legend-size-reset" onclick="resetLegendSize(event)" title="Resetar tamanho" style="cursor:pointer;opacity:0.4;font-size:0.9em;transition:opacity 0.15s;padding:2px" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.4">&#x21BB;</span>
+                    <span style="opacity:0.35;font-size:0.7em;pointer-events:none">&#x25E2;</span>
                 </div>
             </div>
-            <div id="legend-items" style="padding:0 16px 12px;overflow-y:auto;max-height:35vh;column-gap:16px"></div>
-            <div id="legend-resize-hint" style="position:absolute;bottom:3px;right:6px;opacity:0.25;font-size:0.65em;pointer-events:none">&#x25E2;</div>
+            <div id="legend-items" style="padding:2px 14px 10px;overflow-y:auto"></div>
         </div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-locmap-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
             <div style="font-weight:600;font-size:0.8em;margin-bottom:8px;color:#333">Ferramentas</div>
             <div onclick="toggleScale()" style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:6px;font-size:0.82em;color:#333;transition:background 0.15s" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="width:8px;height:8px;border-radius:50%;background:#999;flex-shrink:0;transition:background 0.2s"></span><span>Escala</span></div>
@@ -467,6 +468,8 @@
             _setToolActive('tb-legend', legendActive);
             if (legendActive) {
                 updateLegend();
+                var items = document.getElementById('legend-items');
+                if (items && container.offsetHeight) items.style.maxHeight = Math.max(30, container.offsetHeight - 44) + 'px';
                 map.on('moveend', scheduleLegendUpdate);
                 map.on('zoomend', scheduleLegendUpdate);
                 map.on('move', scheduleLegendUpdate);
@@ -581,20 +584,76 @@
             var container = document.getElementById('legend-container');
             var items = document.getElementById('legend-items');
             if (!container || !items) return;
-            var cw = container.clientWidth - 32;
-            if (cw < 160) { items.style.columnCount = '1'; items.style.columnWidth = ''; return; }
-            var ncols = Math.max(1, Math.floor(cw / 160));
-            items.style.columnCount = '';
-            items.style.columnWidth = Math.floor(cw / ncols) + 'px';
+            var rows = items.querySelectorAll('.legend-row, .legend-group-title');
+            if (rows.length === 0) {
+                items.style.columnCount = '1';
+                items.style.columnWidth = '';
+                return;
+            }
+            var cw = container.offsetWidth;
+            var pad = 28;
+            var usable = cw - pad;
+            var singleColW = 160;
+            if (usable < singleColW) {
+                items.style.columnCount = '1';
+                items.style.columnWidth = '';
+                return;
+            }
+            var ncols = Math.max(1, Math.floor(usable / singleColW));
+            var colW = Math.floor(usable / ncols);
+            items.style.columnCount = ncols.toString();
+            items.style.columnWidth = colW + 'px';
+            items.style.columnGap = '12px';
+            items.style.columnFill = 'balance';
         }
 
-        function resetLegendSize() {
+        function resetLegendSize(e) {
+            if (e) e.stopPropagation();
             var container = document.getElementById('legend-container');
             if (!container) return;
             container.style.width = '';
             container.style.height = '';
+            updateLegend();
+        }
+
+        var _legendDrag = { active: false, startX: 0, startY: 0, startW: 0, startH: 0 };
+
+        function legendDragStart(e) {
+            if (e.target.id === 'legend-size-reset') return;
+            e.preventDefault();
+            var container = document.getElementById('legend-container');
+            if (!container) return;
+            _legendDrag.active = true;
+            _legendDrag.startX = e.clientX;
+            _legendDrag.startY = e.clientY;
+            _legendDrag.startW = container.offsetWidth;
+            _legendDrag.startH = container.offsetHeight;
+            document.addEventListener('mousemove', legendDragMove);
+            document.addEventListener('mouseup', legendDragEnd);
+        }
+
+        function legendDragMove(e) {
+            if (!_legendDrag.active) return;
+            var container = document.getElementById('legend-container');
+            if (!container) return;
+            var dx = _legendDrag.startX - e.clientX;
+            var dy = e.clientY - _legendDrag.startY;
+            var newW = Math.max(140, _legendDrag.startW - dx);
+            var newH = Math.max(50, _legendDrag.startH + dy);
+            container.style.width = newW + 'px';
+            container.style.height = newH + 'px';
+            var items = document.getElementById('legend-items');
+            if (items) items.style.maxHeight = Math.max(30, newH - 44) + 'px';
             _legendReflowColumns();
         }
+
+        function legendDragEnd() {
+            _legendDrag.active = false;
+            document.removeEventListener('mousemove', legendDragMove);
+            document.removeEventListener('mouseup', legendDragEnd);
+        }
+
+        
 
         function toggleLocMap() {
             var container = document.getElementById('locmap-container');
