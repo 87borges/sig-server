@@ -727,8 +727,15 @@
                 var rect = null;
                 function drawRect() {
                     if (rect) miniMap.removeLayer(rect);
-                    var bounds = map.getBounds();
-                    rect = L.rectangle(bounds, {
+                    var mc = map.getContainer();
+                    var w = mc.clientWidth, h = mc.clientHeight;
+                    var corners = [
+                        map.containerPointToLatLng([0, 0]),
+                        map.containerPointToLatLng([w, 0]),
+                        map.containerPointToLatLng([w, h]),
+                        map.containerPointToLatLng([0, h])
+                    ];
+                    rect = L.polygon(corners, {
                         color: '#c0392b',
                         weight: 2,
                         fillColor: '#c0392b',
