@@ -567,7 +567,7 @@
                         var row = document.createElement('div');
                         row.className = 'legend-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;break-inside:avoid';
-                        row.innerHTML = _legendMakeIcon(vtype, color, false, v.strokeColor, v.weight, v.opacity, v.strokeOpacity) + '<span style="flex:1;">' + (v.name || v.id) + '</span>';
+                        row.innerHTML = _legendMakeIcon(vtype, color, v.dash, v.strokeColor, v.weight, v.opacity, v.strokeOpacity) + '<span style="flex:1;">' + (v.name || v.id) + '</span>';
                         items.appendChild(row);
                     }
                 }
