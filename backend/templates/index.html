@@ -186,10 +186,16 @@
         
         
         
+        
         <div id="legend-container" style="display:none;position:absolute;bottom:16px;left:10px;z-index:997;background:rgba(0,0,0,0.35);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.25);min-width:140px;min-height:50px;font-size:0.78em;overflow:hidden">
-            <div id="legend-header" style="padding:10px 14px 6px;display:flex;align-items:center;gap:6px;cursor:nwse-resize;user-select:none" onmousedown="legendDragStart(event)">
-                <span style="font-size:1em;pointer-events:none">📖</span>
-                <span style="font-weight:600;font-size:0.9em;pointer-events:none">Legenda</span>
+            <div style="position:relative">
+                <div style="padding:10px 28px 6px 14px;display:flex;align-items:center;gap:6px">
+                    <span style="font-size:1em">📖</span>
+                    <span style="font-weight:600;font-size:0.9em">Legenda</span>
+                </div>
+                <div id="legend-resize-grip" onmousedown="legendDragStart(event)" style="position:absolute;top:6px;right:6px;width:16px;height:16px;cursor:nwse-resize;opacity:0.35;transition:opacity 0.15s" onmouseenter="this.style.opacity=0.8" onmouseleave="this.style.opacity=0.35">
+                    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M14 2L14 14M10 6L10 14M6 10L6 14M2 14L2 14" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
             </div>
             <div id="legend-items" style="padding:2px 14px 10px;overflow-y:auto"></div>
         </div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-locmap-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
@@ -610,7 +616,7 @@
         var _legendDrag = { active: false, startX: 0, startY: 0, startW: 0, startH: 0 };
 
         function legendDragStart(e) {
-                        e.preventDefault();
+            e.preventDefault();
             var container = document.getElementById('legend-container');
             if (!container) return;
             _legendDrag.active = true;
@@ -626,10 +632,10 @@
             if (!_legendDrag.active) return;
             var container = document.getElementById('legend-container');
             if (!container) return;
-            var dx = _legendDrag.startX - e.clientX;
+            var dx = e.clientX - _legendDrag.startX;
             var dy = e.clientY - _legendDrag.startY;
-            var newW = Math.max(140, _legendDrag.startW - dx);
-            var newH = Math.max(50, _legendDrag.startH + dy);
+            var newW = Math.max(140, _legendDrag.startW + dx);
+            var newH = Math.max(50, _legendDrag.startH - dy);
             container.style.width = newW + 'px';
             container.style.height = newH + 'px';
             var items = document.getElementById('legend-items');
@@ -642,6 +648,8 @@
             document.removeEventListener('mousemove', legendDragMove);
             document.removeEventListener('mouseup', legendDragEnd);
         }
+
+        
 
         
 
