@@ -494,16 +494,23 @@
             if (weight === undefined || weight === null) weight = 2;
             if (opacity === undefined || opacity === null) opacity = 1;
             if (strokeOpacity === undefined || strokeOpacity === null) strokeOpacity = 1;
+            var dashStr = '';
+            if (dash) {
+                var parts = dash.split(',').map(Number);
+                var s = Math.max(1, weight / 2);
+                var scaled = parts.map(function(p, i) { return i % 2 === 1 ? Math.round(p * s) : p; });
+                dashStr = ' stroke-dasharray="' + scaled.join(',') + '"';
+            }
             if (vtype === 'point') {
-                return '<svg width="24" height="24"><circle cx="12" cy="12" r="9" fill="' + color + '" stroke="rgba(0,0,0,0.15)" stroke-width="1"/></svg>';
+                return '<svg width="28" height="28"><circle cx="14" cy="14" r="11" fill="' + color + '" stroke="rgba(0,0,0,0.15)" stroke-width="1"/></svg>';
             } else if (vtype === 'line') {
-                var dashAttr = dash ? ' stroke-dasharray="6,4"' : '';
-                return '<svg width="32" height="14"><line x1="1" y1="7" x2="31" y2="7" stroke="' + color + '" stroke-width="3.5"' + dashAttr + ' stroke-linecap="round"/></svg>';
+                return '<svg width="40" height="16"><line x1="2" y1="8" x2="38" y2="8" stroke="' + color + '" stroke-width="4"' + dashStr + ' stroke-linecap="round"/></svg>';
             } else {
                 if (weight > 0) {
-                    return '<svg width="22" height="18"><rect x="'+(weight/2)+'" y="'+(weight/2)+'" width="'+(22-weight)+'" height="'+(18-weight)+'" fill="'+color+'" stroke="'+strokeColor+'" stroke-width="'+weight+'" stroke-opacity="'+strokeOpacity+'" fill-opacity="'+opacity+'" rx="2"/></svg>';
+                    var hw = weight / 2;
+                    return '<svg width="30" height="22"><rect x="' + hw + '" y="' + hw + '" width="' + (30 - weight) + '" height="' + (22 - weight) + '" fill="' + color + '" stroke="' + strokeColor + '" stroke-width="' + weight + '" stroke-opacity="' + strokeOpacity + '" fill-opacity="' + opacity + '"' + dashStr + ' rx="2"/></svg>';
                 } else {
-                    return '<svg width="22" height="18"><rect x="1" y="1" width="20" height="16" fill="'+color+'" fill-opacity="'+opacity+'" stroke="none" rx="2"/></svg>';
+                    return '<svg width="30" height="22"><rect x="1" y="1" width="28" height="20" fill="' + color + '" fill-opacity="' + opacity + '" stroke="none" rx="2"/></svg>';
                 }
             }
         }
