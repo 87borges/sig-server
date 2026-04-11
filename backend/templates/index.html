@@ -691,16 +691,18 @@
         function toggleLocMap() {
             var container = document.getElementById('locmap-container');
             if (miniMap) {
-                map.off('moveend', miniMapSync);
-                map.off('zoomend', miniMapSync);
                 map.off('move', miniMapSync);
+                map.off('moveend', miniMapSync);
+                map.off('zoom', miniMapSync);
+                map.off('zoomend', miniMapSync);
+                if (map.getBearing) map.off('rotate', miniMapSync);
                 miniMap.remove();
                 miniMap = null;
                 container.style.display = 'none';
                 _setToolActive('tb-locmap', false);
             } else {
                 container.style.display = 'block';
-                miniMap = L.map('locmap', {
+                var miniOpts = {
                     zoomControl: false,
                     attributionControl: false,
                     dragging: true,
@@ -709,10 +711,19 @@
                     touchZoom: true,
                     keyboard: false,
                     boxZoom: false
-                }).setView(map.getCenter(), map.getZoom() - 4);
+                };
+                if (map.getBearing) {
+                    miniOpts.rotate = true;
+                    miniOpts.compassControl = false;
+                    miniOpts.shiftKeyRotate = false;
+                }
+                miniMap = L.map('locmap', miniOpts).setView(map.getCenter(), map.getZoom() - 4);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19
                 }).addTo(miniMap);
+                if (map.getBearing) {
+                    try { miniMap.setBearing(map.getBearing()); } catch(e) {}
+                }
                 var rect = null;
                 function drawRect() {
                     if (rect) miniMap.removeLayer(rect);
@@ -727,10 +738,16 @@
                 miniMapSync = function() {
                     miniMap.setView(map.getCenter());
                     drawRect();
+                    if (map.getBearing && miniMap.setBearing) {
+                        try { miniMap.setBearing(map.getBearing()); } catch(e) {}
+                    }
                 };
                 miniMapSync();
                 map.on('move', miniMapSync);
+                map.on('moveend', miniMapSync);
                 map.on('zoom', miniMapSync);
+                map.on('zoomend', miniMapSync);
+                if (map.getBearing) map.on('rotate', miniMapSync);
                 _setToolActive('tb-locmap', true);
             }
         }
