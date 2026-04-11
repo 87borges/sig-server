@@ -1140,6 +1140,7 @@
                 if (customRasters[rid]) customRasters[rid].addTo(map);
             }
             renderRasterMenu();
+            if (legendActive) scheduleLegendUpdate();
         }
 
         function loadRasterList() {
@@ -2423,6 +2424,7 @@
                 }
             });
             renderVectorMenu();
+            if (legendActive) scheduleLegendUpdate();
         }
 
         function checkCustomRaster() {
