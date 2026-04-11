@@ -180,7 +180,9 @@
                     <div id="menu-btn" onclick="toggleSidePanel()" style="position:absolute;top:10px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em;flex-shrink:0">⚙️</div>
         <div id="toolbar-btn" onclick="toggleToolbar()" style="position:absolute;top:56px;left:10px;z-index:999;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1em">🛠️</div>
         <div id="toolbar-panel" style="display:none;position:absolute;top:100px;left:10px;width:40px;z-index:998;background:rgba(0,0,0,0.3);backdrop-filter:blur(20px) saturate(200%);-webkit-backdrop-filter:blur(20px) saturate(200%);color:white;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:4px;display:flex;flex-direction:column;gap:2px"><div id="tb-scale" onclick="toggleScale()" title="Escala" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background=this.dataset.active?'rgba(255,255,255,0.25)':'transparent'">📏</div><div id="tb-compass" onclick="toggleCompass()" title="Rosa dos Ventos" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background=this.dataset.active?'rgba(255,255,255,0.25)':'transparent'">🧭</div><div id="tb-locmap" onclick="toggleLocMap()" title="Mapa de Localizacao" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background=this.dataset.active?'rgba(255,255,255,0.25)':'transparent'">📍</div><div id="tb-legend" onclick="toggleLegend()" title="Legenda Dinamica" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:6px;font-size:1.1em;color:white;transition:all 0.15s" onmouseenter="if(!this.dataset.active)this.style.background='rgba(255,255,255,0.2)'" onmouseleave="this.style.background=this.dataset.active?'rgba(255,255,255,0.25)':'transparent'">📖</div></div>
+        
         <div id="locmap-container" style="display:none;position:absolute;bottom:16px;right:10px;width:200px;height:200px;z-index:997;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.3)">
+            <div id="locmap-resize-grip" onmousedown="locmapDragStart(event)" style="position:absolute;top:4px;left:4px;z-index:10;width:18px;height:18px;cursor:nesw-resize;opacity:0.4;transition:opacity 0.15s;display:flex;align-items:center;justify-content:center;font-size:1.1em;color:white;text-shadow:0 1px 3px rgba(0,0,0,0.5)" onmouseenter="this.style.opacity=0.9" onmouseleave="this.style.opacity=0.4">⠿</div>
             <div id="locmap" style="width:100%;height:100%"></div>
         </div>
         
@@ -193,9 +195,7 @@
                     <span style="font-size:1em">📖</span>
                     <span style="font-weight:600;font-size:0.9em">Legenda</span>
                 </div>
-                <div id="legend-resize-grip" onmousedown="legendDragStart(event)" style="position:absolute;top:6px;right:6px;width:16px;height:16px;cursor:nwse-resize;opacity:0.35;transition:opacity 0.15s" onmouseenter="this.style.opacity=0.8" onmouseleave="this.style.opacity=0.35">
-                    <svg width="16" height="16" viewBox="0 0 16 16"><path d="M14 2L14 14M10 6L10 14M6 10L6 14M2 14L2 14" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
-                </div>
+                <div id="legend-resize-grip" onmousedown="legendDragStart(event)" style="position:absolute;top:6px;right:6px;width:18px;height:18px;cursor:nwse-resize;opacity:0.35;transition:opacity 0.15s;display:flex;align-items:center;justify-content:center;font-size:1.1em" onmouseenter="this.style.opacity=0.8" onmouseleave="this.style.opacity=0.35">⠿</div>
             </div>
             <div id="legend-items" style="padding:2px 14px 10px;overflow-y:auto"></div>
         </div>olbar-panel" style="display:none;position:absolute;top:10px;left:10px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:6px;display:flex;flex-direction:column;gap:2px"><div onclick="toggleScale()" title="Escala" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-scale-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>📏</div><div onclick="toggleCompass()" title="Rosa dos Ventos" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-compass-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🧭</div><div onclick="toggleTestTool(3)" title="Ferramenta 3" style="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:1.1em;transition:background 0.15s;text-align:center" onmouseenter="this.style.background='rgba(0,0,0,0.06)'" onmouseleave="this.style.background='transparent'"><span id="tb-locmap-ind" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#999;vertical-align:middle;margin-right:4px;transition:background 0.2s"></span>🔧</div></div>olbar-panel" style="display:none;position:absolute;top:10px;left:50px;z-index:998;background:rgba(255,255,255,0.5);backdrop-filter:blur(12px) saturate(200%);-webkit-backdrop-filter:blur(12px) saturate(200%);border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:12px;min-width:180px">
@@ -647,6 +647,41 @@
             _legendDrag.active = false;
             document.removeEventListener('mousemove', legendDragMove);
             document.removeEventListener('mouseup', legendDragEnd);
+        }
+
+        var _locmapDrag = { active: false, startX: 0, startY: 0, startW: 0, startH: 0 };
+
+        function locmapDragStart(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var container = document.getElementById('locmap-container');
+            if (!container) return;
+            _locmapDrag.active = true;
+            _locmapDrag.startX = e.clientX;
+            _locmapDrag.startY = e.clientY;
+            _locmapDrag.startW = container.offsetWidth;
+            _locmapDrag.startH = container.offsetHeight;
+            document.addEventListener('mousemove', locmapDragMove);
+            document.addEventListener('mouseup', locmapDragEnd);
+        }
+
+        function locmapDragMove(e) {
+            if (!_locmapDrag.active) return;
+            var container = document.getElementById('locmap-container');
+            if (!container) return;
+            var dx = e.clientX - _locmapDrag.startX;
+            var dy = e.clientY - _locmapDrag.startY;
+            var newW = Math.max(120, _locmapDrag.startW - dx);
+            var newH = Math.max(120, _locmapDrag.startH - dy);
+            container.style.width = newW + 'px';
+            container.style.height = newH + 'px';
+            if (miniMap) miniMap.invalidateSize();
+        }
+
+        function locmapDragEnd() {
+            _locmapDrag.active = false;
+            document.removeEventListener('mousemove', locmapDragMove);
+            document.removeEventListener('mouseup', locmapDragEnd);
         }
 
         
