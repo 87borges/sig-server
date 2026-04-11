@@ -491,12 +491,12 @@
 
         function _legendMakeIcon(vtype, color, dash) {
             if (vtype === 'point') {
-                return '<svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="' + color + '" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/></svg>';
+                return '<svg width="24" height="24"><circle cx="12" cy="12" r="9" fill="' + color + '" stroke="rgba(0,0,0,0.15)" stroke-width="1"/></svg>';
             } else if (vtype === 'line') {
-                var dashAttr = dash ? ' stroke-dasharray="4,3"' : '';
-                return '<svg width="20" height="8"><line x1="0" y1="4" x2="20" y2="4" stroke="' + color + '" stroke-width="2.5"' + dashAttr + '/></svg>';
+                var dashAttr = dash ? ' stroke-dasharray="6,4"' : '';
+                return '<svg width="32" height="14"><line x1="1" y1="7" x2="31" y2="7" stroke="' + color + '" stroke-width="3.5"' + dashAttr + ' stroke-linecap="round"/></svg>';
             } else {
-                return '<span style="display:inline-block;width:14px;height:12px;background:' + color + ';border:1px solid rgba(255,255,255,0.3);border-radius:2px"></span>';
+                return '<span style="display:inline-block;width:22px;height:18px;background:' + color + ';border:1.5px solid rgba(0,0,0,0.15);border-radius:3px"></span>';
             }
         }
 
@@ -573,7 +573,7 @@
                         var row = document.createElement('div');
                         row.className = 'legend-row';
                         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0;break-inside:avoid';
-                        row.innerHTML = '<span style="display:inline-block;width:14px;height:12px;background:repeating-linear-gradient(45deg,#555,#555 2px,#777 2px,#777 4px);border:1px solid rgba(0,0,0,0.15);border-radius:2px"></span><span style="flex:1;">' + (rst.name || rst.id) + '</span>';
+                        row.innerHTML = '<span style="display:inline-block;width:22px;height:18px;background:repeating-linear-gradient(45deg,#555,#555 2px,#777 2px,#777 4px);border:1px solid rgba(0,0,0,0.15);border-radius:2px"></span><span style="flex:1;">' + (rst.name || rst.id) + '</span>';
                         items.appendChild(row);
                     }
                 }
